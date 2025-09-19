@@ -1,0 +1,60 @@
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+local.properties
+
+# Android Studio generated files
+.gradle/
+build/
+captures/
+*.apk
+*.ap_
+*.aab
+*.jar
+*.aar
+*.dex
+*.class
+*.keystore
+*.jks
+
+# Android Studio Profiler files
+*.hprof
+*.snapshot
+
+# Gradle files
+gradle/wrapper/gradle-wrapper.jar
+!gradle-wrapper.jar # but keep the wrapper jar for reproducibility
+
+# Emulator & Device files
+.DS_Store
+*~
+*.swp
+
+# KSP generated files
+app/build/generated/ksp/
+
+# Hilt generated files (usually covered by build/)
+# but can add specific if needed
+
+# Secrets (if any, though better to use other mechanisms)
+# secrets.properties
+# *.pem
+
+# Log files
+*.log
+
+# Windows thumbnail cache files
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Misc
+.attach_pid*
+*.bak
