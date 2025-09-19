@@ -1,22 +1,22 @@
 package ru.devsoland.socialsync.data.model
 
 import androidx.room.Entity
-import androidx.room.Index // <-- Добавлен импорт для @Index
+import androidx.room.Index
 import androidx.room.PrimaryKey
-// import java.time.LocalDate // LocalDate больше не используется напрямую здесь
 
 @Entity(
     tableName = "contacts",
-    indices = [Index(value = ["deviceContactId"])] // <-- Добавлен индекс
+    indices = [Index(value = ["deviceContactId"])]
 )
 data class Contact(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
-    val deviceContactId: String? = null, // <-- НОВОЕ ПОЛЕ
+    val deviceContactId: String? = null,
     val lastName: String,
     val firstName: String,
     val middleName: String? = null,
-    val birthDate: String?, // <-- ТИП ИЗМЕНЕН на String?
+    val birthDate: String?,
     val phoneNumber: String? = null,
+    val photoUri: String? = null, // <-- НОВОЕ ПОЛЕ ДОБАВЛЕНО
     val notes: String? = null
 )

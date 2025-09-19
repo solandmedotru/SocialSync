@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters // <-- ВОССТАНОВЛЕН ИМПОРТ
+import androidx.room.TypeConverters
 import ru.devsoland.socialsync.data.dao.ContactDao
 import ru.devsoland.socialsync.data.dao.EventDao
 import ru.devsoland.socialsync.data.model.Contact
@@ -12,10 +12,10 @@ import ru.devsoland.socialsync.data.model.Event
 
 @Database(
     entities = [Contact::class, Event::class],
-    version = 1,
+    version = 2, // <-- ВЕРСИЯ УВЕЛИЧЕНА
     exportSchema = false
 )
-@TypeConverters(Converters::class) // <-- ВОССТАНОВЛЕНА АННОТАЦИЯ
+@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun contactDao(): ContactDao
@@ -32,6 +32,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "social_sync_database"
                 )
+                .fallbackToDestructiveMigration() // <-- ДОБАВЛЕНО
                 .build()
                 INSTANCE = instance
                 instance
