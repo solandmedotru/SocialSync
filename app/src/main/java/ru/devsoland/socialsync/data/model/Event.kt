@@ -2,6 +2,7 @@ package ru.devsoland.socialsync.data.model
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index // <-- ДОБАВЛЕН ИМПОРТ
 import androidx.room.PrimaryKey
 import java.time.LocalDate
 
@@ -12,14 +13,15 @@ import java.time.LocalDate
             entity = Contact::class,
             parentColumns = ["id"],
             childColumns = ["contactId"],
-            onDelete = ForeignKey.CASCADE // Если контакт удален, связанные события тоже удаляются
+            onDelete = ForeignKey.CASCADE
         )
-    ]
+    ],
+    indices = [Index(value = ["contactId"])] // <-- ДОБАВЛЕН ИНДЕКС ДЛЯ contactId
 )
 data class Event(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
-    val contactId: Long?, // Может быть null, если событие не привязано к контакту
+    val contactId: Long?,
     val name: String,
     val date: LocalDate,
     val eventType: String,

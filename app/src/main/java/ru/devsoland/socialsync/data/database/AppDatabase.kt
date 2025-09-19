@@ -4,40 +4,34 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
+import androidx.room.TypeConverters // <-- ВОССТАНОВЛЕН ИМПОРТ
 import ru.devsoland.socialsync.data.dao.ContactDao
 import ru.devsoland.socialsync.data.dao.EventDao
 import ru.devsoland.socialsync.data.model.Contact
 import ru.devsoland.socialsync.data.model.Event
 
 @Database(
-    entities = [Contact::class, Event::class], // Наши таблицы
-    version = 1, // Начальная версия БД. Увеличивать при изменении схемы
-    exportSchema = false // Для простоты пока отключаем экспорт схемы
+    entities = [Contact::class, Event::class],
+    version = 1,
+    exportSchema = false
 )
-@TypeConverters(Converters::class) // Регистрируем наши конвертеры типов
+@TypeConverters(Converters::class) // <-- ВОССТАНОВЛЕНА АННОТАЦИЯ
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun contactDao(): ContactDao
     abstract fun eventDao(): EventDao
 
     companion object {
-        // @Volatile гарантирует, что значение INSTANCE всегда актуально
-        // и одинаково для всех потоков исполнения.
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
         fun getInstance(context: Context): AppDatabase {
-            // synchronized гарантирует, что только один поток может
-            // одновременно выполнять этот блок кода,
-            // предотвращая создание нескольких экземпляров БД.
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "social_sync_database" // Имя файла БД на устройстве
+                    "social_sync_database"
                 )
-                // .fallbackToDestructiveMigration() // Для миграций, пока не нужно
                 .build()
                 INSTANCE = instance
                 instance

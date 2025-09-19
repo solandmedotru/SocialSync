@@ -13,7 +13,7 @@ import ru.devsoland.socialsync.data.model.Contact
 interface ContactDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(contact: Contact): Long // Возвращает ID вставленной записи
+    suspend fun insert(contact: Contact): Long
 
     @Update
     suspend fun update(contact: Contact)
@@ -25,5 +25,9 @@ interface ContactDao {
     fun getAllContacts(): Flow<List<Contact>>
 
     @Query("SELECT * FROM contacts WHERE id = :contactId")
-    fun getContactById(contactId: Long): Flow<Contact?> // Контакт может отсутствовать
+    fun getContactById(contactId: Long): Flow<Contact?>
+
+    // НОВЫЙ МЕТОД
+    @Query("SELECT * FROM contacts WHERE deviceContactId = :deviceContactId LIMIT 1")
+    suspend fun getContactByDeviceContactId(deviceContactId: String): Contact?
 }

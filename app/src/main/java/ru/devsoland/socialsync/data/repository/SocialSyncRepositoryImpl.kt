@@ -1,21 +1,26 @@
 package ru.devsoland.socialsync.data.repository
 
+import android.annotation.SuppressLint
+import android.content.Context
+import android.provider.ContactsContract
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import ru.devsoland.socialsync.data.dao.ContactDao
 import ru.devsoland.socialsync.data.dao.EventDao
 import ru.devsoland.socialsync.data.model.Contact
 import ru.devsoland.socialsync.data.model.Event
-import javax.inject.Inject // Стандартная аннотация для DI
+// import java.time.LocalDate // <-- УДАЛЕН ИЛИ ЗАКОММЕНТИРОВАН
+// import java.time.format.DateTimeParseException // <-- УДАЛЕН ИЛИ ЗАКОММЕНТИРОВАН
+import javax.inject.Inject
 
-// @Inject в конструкторе говорит Hilt (или другому DI фреймворку),
-// как создать экземпляр этого класса.
-// Hilt должен будет знать, как предоставить ContactDao и EventDao.
 class SocialSyncRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val contactDao: ContactDao,
     private val eventDao: EventDao
 ) : SocialSyncRepository {
 
-    // --- Контакты ---
     override fun getAllContacts(): Flow<List<Contact>> {
         return contactDao.getAllContacts()
     }
@@ -34,6 +39,104 @@ class SocialSyncRepositoryImpl @Inject constructor(
 
     override suspend fun deleteContact(contact: Contact) {
         contactDao.delete(contact)
+    }
+
+    @SuppressLint("Range")
+    override suspend fun fetchDeviceContacts(): List<Contact> = withContext(Dispatchers.IO) {
+        val deviceContacts = mutableListOf<Contact>()
+        val contentResolver = context.contentResolver
+
+        val contactProjection = arrayOf(
+            ContactsContract.Contacts._ID,
+            ContactsContract.Contacts.DISPLAY_NAME_PRIMARY
+        )
+
+        val contactCursor = contentResolver.query(
+            ContactsContract.Contacts.CONTENT_URI,
+            contactProjection,
+            null,
+            null,
+            ContactsContract.Contacts.DISPLAY_NAME_PRIMARY + " ASC"
+        )
+
+        contactCursor?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                do {
+                    val contactIdStr = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts._ID))
+                    val displayName = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME_PRIMARY))
+
+                    var phoneNumber: String? = null
+                    var birthDateString: String? = null
+
+                    val phoneCursor = contentResolver.query(
+                        ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                        arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+                        ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?",
+                        arrayOf(contactIdStr),
+                        null
+                    )
+                    phoneCursor?.use { pCursor ->
+                        if (pCursor.moveToFirst()) {
+                            phoneNumber = pCursor.getString(pCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER))
+                        }
+                    }
+                    phoneCursor?.close()
+
+                    val eventSelection = (
+                        ContactsContract.Data.CONTACT_ID + " = ? AND " +
+                        ContactsContract.Data.MIMETYPE + " = ? AND " +
+                        ContactsContract.CommonDataKinds.Event.TYPE + " = ?"
+                    )
+                    val eventSelectionArgs = arrayOf(
+                        contactIdStr,
+                        ContactsContract.CommonDataKinds.Event.CONTENT_ITEM_TYPE,
+                        ContactsContract.CommonDataKinds.Event.TYPE_BIRTHDAY.toString()
+                    )
+                    val eventProjection = arrayOf(ContactsContract.CommonDataKinds.Event.START_DATE)
+
+                    val eventCursor = contentResolver.query(
+                        ContactsContract.Data.CONTENT_URI,
+                        eventProjection,
+                        eventSelection,
+                        eventSelectionArgs,
+                        null
+                    )
+                    eventCursor?.use { eCursor ->
+                        if (eCursor.moveToFirst()) {
+                            birthDateString = eCursor.getString(eCursor.getColumnIndex(ContactsContract.CommonDataKinds.Event.START_DATE))
+                        }
+                    }
+                    eventCursor?.close()
+
+                    val nameParts = displayName?.split(" ", limit = 2) ?: listOf()
+                    val firstName = nameParts.getOrNull(0) ?: ""
+                    val lastName = nameParts.getOrNull(1) ?: ""
+
+                    if (firstName.isNotBlank() && birthDateString != null) {
+                         deviceContacts.add(
+                            Contact(
+                                deviceContactId = contactIdStr,
+                                firstName = firstName,
+                                lastName = lastName,
+                                phoneNumber = phoneNumber,
+                                birthDate = birthDateString
+                            )
+                        )
+                    } else if (firstName.isNotBlank() && birthDateString == null) {
+                         println("Контакт $displayName ($contactIdStr) не имеет даты рождения в ContactsContract или она null.")
+                    }
+
+                } while (cursor.moveToNext())
+            }
+        }
+        contactCursor?.close()
+        println("fetchDeviceContacts: Найдено на устройстве (с непустым именем и непустой строкой ДР): ${deviceContacts.size}")
+        return@withContext deviceContacts
+    }
+
+    // НОВАЯ РЕАЛИЗАЦИЯ МЕТОДА
+    override suspend fun getContactByDeviceContactId(deviceContactId: String): Contact? {
+        return contactDao.getContactByDeviceContactId(deviceContactId)
     }
 
     // --- События ---

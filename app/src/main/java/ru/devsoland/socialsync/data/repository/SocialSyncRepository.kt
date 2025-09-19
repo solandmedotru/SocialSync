@@ -12,6 +12,8 @@ interface SocialSyncRepository {
     suspend fun insertContact(contact: Contact): Long
     suspend fun updateContact(contact: Contact)
     suspend fun deleteContact(contact: Contact)
+    suspend fun fetchDeviceContacts(): List<Contact>
+    suspend fun getContactByDeviceContactId(deviceContactId: String): Contact? // <-- НОВЫЙ МЕТОД
 
     // --- События ---
     fun getAllEvents(): Flow<List<Event>>
