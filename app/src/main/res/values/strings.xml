@@ -1,4 +1,14 @@
 <resources>
     <string name="app_name">SocialSync+</string>
     <string name="contact_list_title">Контакты</string>
+    <string name="events_screen_title">События</string>
+    <string name="profile_screen_title">Профиль</string>
+    <string name="add_contact_screen_title">Добавить контакт</string>
+    <string name="upcoming_events_title">Ближайшие события</string>
+    <string name="no_upcoming_events">Нет событий</string>
+    <string name="load_contacts_from_device_button">Загрузка контактов с телефона</string>
+    <string name="contact_list_empty">Список контактов пуст</string>
+    <string name="contact_photo_description">Фото контакта</string>
+    <string name="edit_contact_description">Редактировать контакт</string>
+    <string name="add_contact_description">Добавить контакт</string>
 </resources>

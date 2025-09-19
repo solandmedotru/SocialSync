@@ -4,34 +4,32 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.* 
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource // Для плейсхолдера в AsyncImage
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage // <-- ИМПОРТ COIL
+import coil.compose.AsyncImage
 import ru.devsoland.socialsync.R
 import ru.devsoland.socialsync.data.model.Contact
 import ru.devsoland.socialsync.ui.theme.SocialSyncTheme
@@ -42,7 +40,7 @@ import java.time.format.DateTimeParseException
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
-// formatBirthDate и formatBirthDateWithDaysUntil, getDaysWord остаются без изменений
+// formatBirthDateWithDaysUntil и getDaysWord остаются без изменений
 
 @Composable
 fun formatBirthDateWithDaysUntil(birthDateString: String?): String {
@@ -56,9 +54,9 @@ fun formatBirthDateWithDaysUntil(birthDateString: String?): String {
 
     try {
         val fullDate = LocalDate.parse(birthDateString, DateTimeFormatter.ISO_LOCAL_DATE)
-        if (fullDate.year >= 1800) {
+        if (fullDate.year >= 1800) { // Считаем год "разумным"
             parsedDate = fullDate
-        } else {
+        } else { // Если год слишком ранний (например, 0001), считаем его неизвестным
             parsedDate = LocalDate.of(today.year, fullDate.month, fullDate.dayOfMonth)
             isYearKnown = false
         }
@@ -70,10 +68,10 @@ fun formatBirthDateWithDaysUntil(birthDateString: String?): String {
                 parsedDate = monthDay.atYear(today.year)
                 isYearKnown = false
             } catch (e2: DateTimeParseException) {
-                return birthDateString
+                return birthDateString // Возвращаем исходную строку, если парсинг не удался
             }
         } else {
-            return birthDateString
+            return birthDateString // Возвращаем исходную строку для других нераспознанных форматов
         }
     }
 
@@ -96,8 +94,8 @@ fun formatBirthDateWithDaysUntil(birthDateString: String?): String {
         daysUntil == 0L -> "(Сегодня!)"
         daysUntil > 0L -> "(через $daysUntil ${getDaysWord(daysUntil)})"
         else -> {
-            val daysPassed = ChronoUnit.DAYS.between(nextBirthday.minusYears(1), today)
-            "(прошел $daysPassed ${getDaysWord(daysPassed)} назад)"
+            val daysPassed = ChronoUnit.DAYS.between(nextBirthday, today)
+            "(прошло $daysPassed ${getDaysWord(daysPassed)} назад)"
         }
     }
     return "$birthDateFormatted $daysUntilString"
@@ -107,19 +105,20 @@ fun getDaysWord(days: Long): String {
     val absDays = Math.abs(days)
     val lastDigit = absDays % 10
     val lastTwoDigits = absDays % 100
-    if (lastTwoDigits in 11..14) return "дней"
+    if (lastTwoDigits in 11L..19L) return "дней"
     return when (lastDigit) {
         1L -> "день"
-        in 2..4 -> "дня"
+        in 2L..4L -> "дня"
         else -> "дней"
     }
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+// OptIn для ExperimentalMaterial3Api здесь больше не нужен, если TopAppBar удален
 @Composable
 fun ContactListScreen(
     viewModel: ContactListViewModel = hiltViewModel()
+    // PaddingValues от NavHost в MainActivity будут применены автоматически
 ) {
     val contacts by viewModel.contacts.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -130,67 +129,59 @@ fun ContactListScreen(
         if (isGranted) {
             viewModel.loadContactsFromDevice()
         } else {
-            // TODO: Показать Snackbar или Toast
+            // TODO: Показать Snackbar или Toast с объяснением, почему разрешение важно
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(id = R.string.contact_list_title)) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary
-                )
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            Button( // Кнопка осталась для удобства тестирования загрузки
-                onClick = {
-                    when (ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.READ_CONTACTS
-                    )) {
-                        PackageManager.PERMISSION_GRANTED -> {
-                            viewModel.loadContactsFromDevice()
-                        }
-                        else -> {
-                            permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
-                        }
+    // TopAppBar удален отсюда, управляется из MainActivity
+    Column(modifier = Modifier.fillMaxSize()) { 
+        Button(
+            onClick = {
+                when (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.READ_CONTACTS
+                )) {
+                    PackageManager.PERMISSION_GRANTED -> {
+                        viewModel.loadContactsFromDevice()
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text("Загрузить контакты с устройства")
-            }
-
-            if (contacts.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "Список контактов пуст. Нажмите кнопку выше, чтобы загрузить контакты.",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+                    else -> {
+                        permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                    }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    items(contacts, key = { contact -> contact.id }) { contact ->
-                        ContactListItem(
-                            contact = contact,
-                            onContactClick = { /* TODO: Навигация */ },
-                            onEditClick = { /* TODO: Навигация */ }
-                        )
-                        Divider()
-                    }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp) // Отступы для самой кнопки
+        ) {
+            Text(stringResource(R.string.load_contacts_from_device_button))
+        }
+
+        if (contacts.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f) 
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.contact_list_empty),
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f), 
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp) // Добавляем отступ снизу для контента
+            ) {
+                items(contacts, key = { contact -> contact.id }) { contact ->
+                    ContactListItem(
+                        contact = contact,
+                        onContactClick = { /* TODO: Навигация на экран деталей контакта */ },
+                        onEditClick = { /* TODO: Навигация на экран редактирования контакта */ }
+                    )
+                    Divider()
                 }
             }
         }
@@ -207,18 +198,18 @@ fun ContactListItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onContactClick() }
-            .padding(vertical = 12.dp),
+            .padding(vertical = 12.dp), // Этот padding внутри элемента списка остается
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
             model = contact.photoUri,
-            contentDescription = "Аватар контакта ${contact.firstName}",
-            placeholder = painterResource(id = R.drawable.ic_contact_placeholder_avatar), // <-- ЗАГОТОВЛЕННЫЙ ПЛЕЙСХОЛДЕР
-            error = painterResource(id = R.drawable.ic_contact_placeholder_avatar), // <-- ПЛЕЙСХОЛДЕР ПРИ ОШИБКЕ
+            contentDescription = stringResource(R.string.contact_photo_description, contact.firstName ?: ""),
+            placeholder = painterResource(id = R.drawable.ic_contact_placeholder_avatar),
+            error = painterResource(id = R.drawable.ic_contact_placeholder_avatar),
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondaryContainer), // Фон для плейсхолдера, если фото не загрузится
+                .background(MaterialTheme.colorScheme.secondaryContainer),
             contentScale = ContentScale.Crop
         )
 
@@ -243,7 +234,7 @@ fun ContactListItem(
         IconButton(onClick = onEditClick) {
             Icon(
                 imageVector = Icons.Filled.Edit,
-                contentDescription = "Редактировать контакт",
+                contentDescription = stringResource(R.string.edit_contact_description),
                 tint = MaterialTheme.colorScheme.primary
             )
         }
@@ -255,6 +246,9 @@ fun ContactListItem(
 @Composable
 fun ContactListScreenPreview() {
     SocialSyncTheme {
+        // Для превью теперь нужно имитировать Scaffold из MainActivity, если нужен TopAppBar и BottomBar
+        // или просто отображать контент экрана как есть.
+        // Если нужен TopAppBar для превью, его нужно будет добавить здесь вручную.
         ContactListScreen()
     }
 }
@@ -264,7 +258,7 @@ fun ContactListScreenPreview() {
 fun ContactListItemPreview() {
     val sampleContactWithPhoto = Contact(
         id = 1, firstName = "Елена", lastName = "Петрова", birthDate = "1990-10-15",
-        photoUri = "content://com.android.contacts/contacts/1/photo" // Пример URI, работать не будет в превью
+        photoUri = "content://com.android.contacts/contacts/1/photo"
     )
     val sampleContactNoPhoto = Contact(
         id = 2, firstName = "Игорь", lastName = "Максимов", birthDate = "--12-25",
