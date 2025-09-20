@@ -6,10 +6,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Divider // Оставляем, если используется
-import androidx.compose.material3.MaterialTheme // Оставляем для стилей
-import androidx.compose.material3.Text // Оставляем для текста
-// ExperimentalMaterial3Api больше не нужен здесь, если TopAppBar удален
+import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color // Не используется напрямую, если все из MaterialTheme
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.rememberCalendarState
@@ -34,18 +35,42 @@ import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.daysOfWeek
 import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
 import ru.devsoland.socialsync.R
+import ru.devsoland.socialsync.ui.AppDestinations
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.MonthDay
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.time.format.TextStyle
 import java.util.Locale
 
-// OptIn(ExperimentalMaterial3Api::class) // Больше не нужен здесь
+fun parseContactBirthDateToMonthDay(birthDateString: String?): MonthDay? {
+    if (birthDateString.isNullOrBlank()) return null
+    return try {
+        val fullDate = LocalDate.parse(birthDateString, DateTimeFormatter.ISO_LOCAL_DATE)
+        MonthDay.from(fullDate)
+    } catch (e: DateTimeParseException) {
+        if (birthDateString.startsWith("--") && birthDateString.length == 7) {
+            try {
+                val monthDayPart = birthDateString.substring(2) 
+                MonthDay.parse(monthDayPart, DateTimeFormatter.ofPattern("MM-dd"))
+            } catch (e2: DateTimeParseException) {
+                null
+            }
+        } else {
+            null
+        }
+    }
+}
+
 @Composable
 fun EventsScreen(
+    navController: NavController, 
     viewModel: EventsViewModel = hiltViewModel()
 ) {
     val upcomingEvents by viewModel.upcomingEvents.collectAsStateWithLifecycle()
+    val allBirthMonthDays by viewModel.allBirthMonthDays.collectAsStateWithLifecycle()
 
     val currentMonth = remember { YearMonth.now() }
     val startMonth = remember { currentMonth.minusMonths(100) }
@@ -61,9 +86,7 @@ fun EventsScreen(
 
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
 
-    // TopAppBar удален отсюда, управляется из MainActivity
     Column(modifier = Modifier.fillMaxSize()) {
-        // Содержимое экрана ниже TopAppBar, который теперь в MainActivity
         MonthHeader(calendarMonth = calendarState.firstVisibleMonth)
         DaysOfWeekHeader(daysOfWeek = daysOfWeek(firstDayOfWeek = firstDayOfWeek))
 
@@ -71,8 +94,24 @@ fun EventsScreen(
             state = calendarState,
             modifier = Modifier.padding(horizontal = 16.dp),
             dayContent = { day ->
-                DayView(day = day, isSelected = selectedDate == day.date) {
+                val dayMonthDay = MonthDay.from(day.date)
+                val hasEvent = allBirthMonthDays.contains(dayMonthDay)
+
+                DayView(
+                    day = day, 
+                    isSelected = selectedDate == day.date, 
+                    hasEvent = hasEvent
+                ) {
                     selectedDate = if (selectedDate == day.date) null else day.date
+                    if (hasEvent && day.position == DayPosition.MonthDate) { // Убедимся, что кликаем на день текущего месяца
+                        val eventForDay = upcomingEvents.find { uiEvent ->
+                            val contactMonthDay = parseContactBirthDateToMonthDay(uiEvent.contact.birthDate)
+                            contactMonthDay == dayMonthDay
+                        }
+                        eventForDay?.let {
+                            navController.navigate(AppDestinations.eventDetailRoute(it.contact.id))
+                        }
+                    }
                 }
             }
         )
@@ -98,11 +137,16 @@ fun EventsScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f), 
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp), // Добавляем отступ снизу
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(upcomingEvents, key = { it.contact.id }) { event ->
-                    UpcomingEventItem(event = event)
+                    UpcomingEventItem(
+                        event = event,
+                        onClick = {
+                            navController.navigate(AppDestinations.eventDetailRoute(event.contact.id))
+                        }
+                    )
                     Divider()
                 }
             }
@@ -111,16 +155,31 @@ fun EventsScreen(
 }
 
 @Composable
-fun DayView(day: CalendarDay, isSelected: Boolean, onClick: (CalendarDay) -> Unit) {
+fun DayView(
+    day: CalendarDay, 
+    isSelected: Boolean, 
+    hasEvent: Boolean, 
+    onClick: (CalendarDay) -> Unit
+) {
+    val backgroundColor = when {
+        isSelected -> MaterialTheme.colorScheme.primaryContainer
+        hasEvent && day.position == DayPosition.MonthDate -> MaterialTheme.colorScheme.tertiaryContainer
+        day.position == DayPosition.MonthDate -> MaterialTheme.colorScheme.surface
+        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f) // Дни не текущего месяца
+    }
+
+    val textColor = when {
+        isSelected -> MaterialTheme.colorScheme.onPrimaryContainer
+        hasEvent && day.position == DayPosition.MonthDate -> MaterialTheme.colorScheme.onTertiaryContainer
+        day.position == DayPosition.MonthDate -> MaterialTheme.colorScheme.onSurface
+        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+    }
+
     Box(
         modifier = Modifier
-            .aspectRatio(1f)
-            .padding(1.dp)
-            .background(
-                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                else if (day.position == DayPosition.MonthDate) MaterialTheme.colorScheme.surface
-                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-            )
+            .aspectRatio(1f) 
+            .padding(1.dp) // Небольшой отступ между ячейками
+            .background(color = backgroundColor) // ИСПОЛЬЗУЕМ НОВЫЙ ФОН
             .clickable(enabled = day.position == DayPosition.MonthDate) {
                 onClick(day)
             },
@@ -128,13 +187,13 @@ fun DayView(day: CalendarDay, isSelected: Boolean, onClick: (CalendarDay) -> Uni
     ) {
         Text(
             text = day.date.dayOfMonth.toString(),
-            color = if (day.position == DayPosition.MonthDate)
-                        if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            color = textColor // ИСПОЛЬЗУЕМ СООТВЕТСТВУЮЩИЙ ЦВЕТ ТЕКСТА
         )
+        // Точку-индикатор убрали, так как теперь вся ячейка меняет цвет
     }
 }
+
+// MonthHeader, DaysOfWeekHeader, UpcomingEventItem остаются без изменений
 
 @Composable
 fun MonthHeader(calendarMonth: CalendarMonth) {
@@ -174,10 +233,14 @@ fun DaysOfWeekHeader(daysOfWeek: List<DayOfWeek>) {
 }
 
 @Composable
-fun UpcomingEventItem(event: UiUpcomingEvent) {
+fun UpcomingEventItem(
+    event: UiUpcomingEvent,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick() } 
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

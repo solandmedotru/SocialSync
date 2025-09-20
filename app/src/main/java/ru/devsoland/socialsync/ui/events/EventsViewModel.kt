@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-// import android.util.Log // Для отладки, если понадобится
 import ru.devsoland.socialsync.data.model.Contact
 import ru.devsoland.socialsync.data.repository.SocialSyncRepository
 import java.time.LocalDate
@@ -34,85 +33,81 @@ class EventsViewModel @Inject constructor(
     private val _upcomingEvents = MutableStateFlow<List<UiUpcomingEvent>>(emptyList())
     val upcomingEvents: StateFlow<List<UiUpcomingEvent>> = _upcomingEvents.asStateFlow()
 
+    private val _allBirthMonthDays = MutableStateFlow<Set<MonthDay>>(emptySet())
+    val allBirthMonthDays: StateFlow<Set<MonthDay>> = _allBirthMonthDays.asStateFlow()
+
     init {
-        loadUpcomingEvents()
+        loadEventData()
     }
 
-    private fun loadUpcomingEvents() {
+    private fun loadEventData() {
         viewModelScope.launch {
             repository.getAllContacts()
                 .map { contacts ->
                     val today = LocalDate.now()
-                    contacts
+                    val birthMonthDays = mutableSetOf<MonthDay>()
+                    val upcoming = contacts
                         .filter { !it.birthDate.isNullOrBlank() }
                         .mapNotNull { contact ->
-                            parseBirthDateToEvent(contact, today)
+                            val parsedEventData = parseBirthDate(contact.birthDate, today)
+                            if (parsedEventData?.monthDay != null) {
+                                birthMonthDays.add(parsedEventData.monthDay)
+                            }
+                            // Создаем UiUpcomingEvent, если дата рождения валидна
+                            parsedEventData?.nextOccurrence?.let {
+                                val daysUntil = ChronoUnit.DAYS.between(today, it)
+                                val dateText = it.format(DateTimeFormatter.ofPattern("d MMMM"))
+                                val daysUntilText = when {
+                                    daysUntil == 0L -> "(Сегодня!)"
+                                    daysUntil == 1L -> "(Завтра!)"
+                                    daysUntil > 0L -> "(через $daysUntil ${getDaysWord(daysUntil)})"
+                                    else -> ""
+                                }
+                                UiUpcomingEvent(
+                                    contact = contact,
+                                    eventName = "День рождения",
+                                    dateText = dateText,
+                                    daysUntilText = daysUntilText,
+                                    originalNextOccurrence = it
+                                )
+                            }
                         }
                         .sortedBy { it.originalNextOccurrence }
+                    Pair(upcoming, birthMonthDays) // Возвращаем пару: список ближайших и набор MonthDay
                 }
-                .collect { events ->
-                    _upcomingEvents.value = events
+                .collect { (upcoming, monthDays) ->
+                    _upcomingEvents.value = upcoming
+                    _allBirthMonthDays.value = monthDays
                 }
         }
     }
 
-    private fun parseBirthDateToEvent(contact: Contact, today: LocalDate): UiUpcomingEvent? {
-        if (contact.birthDate.isNullOrBlank()) return null
+    // Вспомогательная data class для возврата из parseBirthDate
+    private data class ParsedEventDetails(val monthDay: MonthDay, val nextOccurrence: LocalDate)
 
-        val birthDateString = contact.birthDate
+    // Обновленная функция парсинга, возвращает MonthDay и следующую дату наступления
+    private fun parseBirthDate(birthDateString: String?, today: LocalDate): ParsedEventDetails? {
+        if (birthDateString.isNullOrBlank()) return null
+
         val parsedMonthDay: MonthDay? = try {
-            // Попытка 1: Распарсить как полную дату YYYY-MM-DD (включая "0001-03-15")
             val fullDate = LocalDate.parse(birthDateString, DateTimeFormatter.ISO_LOCAL_DATE)
             MonthDay.from(fullDate)
         } catch (e: DateTimeParseException) {
-            // Попытка 2: Если не получилось, попробовать как формат без года --MM-DD
             if (birthDateString.startsWith("--") && birthDateString.length == 7) {
                 try {
-                    val monthDayPart = birthDateString.substring(2) // Убираем "--"
+                    val monthDayPart = birthDateString.substring(2)
                     MonthDay.parse(monthDayPart, DateTimeFormatter.ofPattern("MM-dd"))
-                } catch (e2: DateTimeParseException) {
-                    null // Ошибка парсинга части MM-dd
-                }
-            } else {
-                null // Не соответствует формату --MM-DD
-            }
+                } catch (e2: DateTimeParseException) { null }
+            } else { null }
         }
 
-        if (parsedMonthDay == null) {
-            // Log.d("EventsViewModel", "Не удалось распознать дату: $birthDateString для контакта ${contact.id}")
-            return null
-        }
+        if (parsedMonthDay == null) return null
 
-        // Вычисляем следующее наступление события, используя parsedMonthDay и текущий год
         var nextOccurrence = parsedMonthDay.atYear(today.year)
-
-        // Если эта дата уже прошла в текущем году, переносим на следующий год
         if (nextOccurrence.isBefore(today)) {
             nextOccurrence = nextOccurrence.plusYears(1)
         }
-        // Примеры:
-        // today = 2024-01-15
-        // parsedMonthDay = 01-10 -> nextOccurrence = 2024-01-10. isBefore(today) -> true. nextOccurrence = 2025-01-10.
-        // parsedMonthDay = 01-15 -> nextOccurrence = 2024-01-15. isBefore(today) -> false. nextOccurrence = 2024-01-15.
-        // parsedMonthDay = 01-20 -> nextOccurrence = 2024-01-20. isBefore(today) -> false. nextOccurrence = 2024-01-20.
-
-        val daysUntil = ChronoUnit.DAYS.between(today, nextOccurrence)
-        val dateText = nextOccurrence.format(DateTimeFormatter.ofPattern("d MMMM"))
-
-        val daysUntilText = when {
-            daysUntil == 0L -> "(Сегодня!)"
-            daysUntil == 1L -> "(Завтра!)"
-            daysUntil > 0L -> "(через $daysUntil ${getDaysWord(daysUntil)})"
-            else -> "" // Эта ветка не должна достигаться, если nextOccurrence всегда >= today
-        }
-
-        return UiUpcomingEvent(
-            contact = contact,
-            eventName = "День рождения",
-            dateText = dateText,
-            daysUntilText = daysUntilText,
-            originalNextOccurrence = nextOccurrence // Это дата для сортировки
-        )
+        return ParsedEventDetails(parsedMonthDay, nextOccurrence)
     }
 
     private fun getDaysWord(days: Long): String {
@@ -120,11 +115,11 @@ class EventsViewModel @Inject constructor(
         val lastDigit = absDays % 10
         val lastTwoDigits = absDays % 100
 
-        if (lastTwoDigits in 11L..19L) return "дней" // 11-19 дней
+        if (lastTwoDigits in 11L..19L) return "дней"
         return when (lastDigit) {
-            1L -> "день"    // 1 день, 21 день, 31 день ...
-            in 2L..4L -> "дня" // 2-4 дня, 22-24 дня ...
-            else -> "дней"    // 0, 5-9 дней, 10 дней ...
+            1L -> "день"
+            in 2L..4L -> "дня"
+            else -> "дней"
         }
     }
 }

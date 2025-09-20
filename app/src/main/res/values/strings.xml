@@ -11,4 +11,13 @@
     <string name="contact_photo_description">Фото контакта</string>
     <string name="edit_contact_description">Редактировать контакт</string>
     <string name="add_contact_description">Добавить контакт</string>
+    <string name="event_detail_screen_title">Детали событий</string>
+    <string name="back_button_description">Назад</string>
+    <string name="loading_event_details">Загрузка деталей собития</string>
+    <string name="event_type_birthday">День рождения!</string>
+    <string name="congratulations_section_title">Поздравления</string>
+    <string name="congratulation_1_title">Первое поздравление</string>
+    <string name="congratulation_1_text">Здесь текст первого поздравления. Будте здоровы, живите богато!</string>
+    <string name="congratulation_2_title">Поздравление второе</string>
+    <string name="congratulation_2_text">Текст второго поздравления. Радости, счастья и успеха.</string>
 </resources>

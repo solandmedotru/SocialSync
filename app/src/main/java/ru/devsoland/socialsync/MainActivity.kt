@@ -4,14 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AccountCircle // Для Контактов
-import androidx.compose.material.icons.filled.DateRange // <-- ЗАМЕНА ДЛЯ ИКОНКИ Event
+import androidx.compose.material.icons.filled.DateRange // Для Событий
 import androidx.compose.material.icons.filled.Person // Для Профиля
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -19,23 +17,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType // <-- ДОБАВЛЕН ИМПОРТ
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.navArgument // <-- ДОБАВЛЕН ИМПОРТ
 import dagger.hilt.android.AndroidEntryPoint
 import ru.devsoland.socialsync.ui.AppDestinations
 import ru.devsoland.socialsync.ui.addcontact.AddContactScreen
 import ru.devsoland.socialsync.ui.contacts.ContactListScreen
+import ru.devsoland.socialsync.ui.eventdetail.EventDetailScreen
 import ru.devsoland.socialsync.ui.events.EventsScreen
 import ru.devsoland.socialsync.ui.profile.ProfileScreen
 import ru.devsoland.socialsync.ui.theme.SocialSyncTheme
 import ru.devsoland.socialsync.ui.welcome.WelcomeScreen
 
-@OptIn(ExperimentalMaterial3Api::class) // Добавлено для CenterAlignedTopAppBar и TopAppBarDefaults
+@OptIn(ExperimentalMaterial3Api::class)
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,7 +49,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Элементы для Bottom Navigation Bar
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val labelResId: Int) {
     object Events : BottomNavItem(AppDestinations.EVENTS_ROUTE, Icons.Filled.DateRange, R.string.events_screen_title)
     object Contacts : BottomNavItem(AppDestinations.CONTACT_LIST_ROUTE, Icons.Filled.AccountCircle, R.string.contact_list_title)
@@ -62,35 +61,38 @@ val bottomNavItems = listOf(
     BottomNavItem.Profile
 )
 
-@OptIn(ExperimentalMaterial3Api::class) // Уже было, но подтверждаем для TopAppBar
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavigator() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    val showBottomBarAndFab = currentDestination?.route !in listOf(
+    // Сравниваем текущий маршрут с шаблоном маршрута деталей события
+    val isEventDetailScreen = currentDestination?.route?.startsWith("event_detail/") == true
+
+    val showBottomBarAndFabAndMainTopBar = currentDestination?.route !in listOf(
         AppDestinations.WELCOME_ROUTE,
         AppDestinations.ADD_CONTACT_ROUTE
-    )
+    ) && !isEventDetailScreen // <-- ИЗМЕНЕНО УСЛОВИЕ
 
     Scaffold(
         topBar = {
-            if (showBottomBarAndFab) { // Показываем TopAppBar на тех же экранах, что и BottomBar
+            if (showBottomBarAndFabAndMainTopBar) {
                 val currentScreenItem = bottomNavItems.find { it.route == currentDestination?.route }
-                currentScreenItem?.let { // Убедимся, что нашли элемент для заголовка
+                currentScreenItem?.let {
                     CenterAlignedTopAppBar(
                         title = { Text(stringResource(id = it.labelResId)) },
                         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             titleContentColor = MaterialTheme.colorScheme.primary
-                        ),
+                        )
                     )
                 }
             }
         },
         bottomBar = {
-            if (showBottomBarAndFab) {
+            if (showBottomBarAndFabAndMainTopBar) {
                 NavigationBar {
                     bottomNavItems.forEach { screen ->
                         NavigationBarItem(
@@ -112,23 +114,21 @@ fun AppNavigator() {
             }
         },
         floatingActionButton = {
-            if (currentDestination?.route == AppDestinations.CONTACT_LIST_ROUTE && showBottomBarAndFab) {
+            if (currentDestination?.route == AppDestinations.CONTACT_LIST_ROUTE && showBottomBarAndFabAndMainTopBar) {
                 FloatingActionButton(onClick = {
                     navController.navigate(AppDestinations.ADD_CONTACT_ROUTE)
                 }) {
-                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_contact_description)) // Используем ресурс
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_contact_description))
                 }
             }
         }
-    ) { innerPadding -> // innerPadding теперь будет учитывать и TopAppBar и BottomNavigationBar
+    ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = AppDestinations.WELCOME_ROUTE,
-            // Modifier.padding(innerPadding) здесь уже применен к NavHost контейнеру
-            // Отдельные экраны не должны добавлять этот innerPadding еще раз, если они не используют свой Scaffold
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding) // Применяем отступы ко всему содержимому NavHost
+                .padding(innerPadding)
         ) {
             composable(AppDestinations.WELCOME_ROUTE) {
                 WelcomeScreen(
@@ -140,25 +140,24 @@ fun AppNavigator() {
                 )
             }
             composable(AppDestinations.CONTACT_LIST_ROUTE) {
-                // ContactListScreen будет принимать paddingValues отсюда
                 ContactListScreen()
             }
             composable(AppDestinations.EVENTS_ROUTE) {
-                // EventsScreen будет принимать paddingValues отсюда
-                EventsScreen()
+                EventsScreen(navController = navController)
             }
             composable(AppDestinations.PROFILE_ROUTE) {
-                // ProfileScreen будет принимать paddingValues отсюда
                 ProfileScreen()
             }
             composable(AppDestinations.ADD_CONTACT_ROUTE) {
-                // AddContactScreen, вероятно, не будет иметь TopAppBar из MainActivity
-                // т.к. showBottomBarAndFab для него false
                 AddContactScreen()
+            }
+            composable(
+                route = AppDestinations.EVENT_DETAIL_ROUTE_PATTERN, // <-- ИСПОЛЬЗУЕМ ШАБЛОН
+                arguments = listOf(navArgument(AppDestinations.EVENT_DETAIL_CONTACT_ID_ARG) { type = NavType.LongType }) // <-- ДОБАВЛЯЕМ АРГУМЕНТ
+            ) {
+                // EventDetailViewModel сам получит contactId из SavedStateHandle
+                EventDetailScreen(navController = navController)
             }
         }
     }
 }
-
-// Предполагается, что R.string.add_contact_description существует.
-// Если нет, замените на "Добавить контакт" или создайте ресурс.

@@ -1,6 +1,7 @@
 package ru.devsoland.socialsync.ui.addcontact
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets // <-- ДОБАВЛЕН ИМПОРТ
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -13,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp // <-- ДОБАВЛЕН ИМПОРТ для dp
 import ru.devsoland.socialsync.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -20,24 +22,16 @@ import ru.devsoland.socialsync.R
 fun AddContactScreen(
     // Сюда можно будет добавить NavController или ViewModel
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(id = R.string.add_contact_screen_title)) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary
-                )
-            )
-        }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("Экран Добавления Контакта")
-        }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("Экран Добавления Контакта") // TODO: Заменить на реальный контент
     }
+
 }
+
+// Убедитесь, что строка <string name="add_contact_screen_title">Добавить контакт</string>
+// или аналогичная есть в вашем файле strings.xml
