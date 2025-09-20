@@ -47,7 +47,7 @@ class SocialSyncRepositoryImpl @Inject constructor(
         val contactProjection = arrayOf(
             ContactsContract.Contacts._ID,
             ContactsContract.Contacts.DISPLAY_NAME_PRIMARY,
-            ContactsContract.Contacts.PHOTO_THUMBNAIL_URI // <-- ДОБАВЛЕНО ДЛЯ URI ФОТО
+            ContactsContract.Contacts.PHOTO_THUMBNAIL_URI
         )
 
         val contactCursor = contentResolver.query(
@@ -63,12 +63,11 @@ class SocialSyncRepositoryImpl @Inject constructor(
                 do {
                     val contactIdStr = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts._ID))
                     val displayName = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME_PRIMARY))
-                    val photoUri = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts.PHOTO_THUMBNAIL_URI)) // <-- ПОЛУЧАЕМ URI ФОТО
+                    val photoUri = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts.PHOTO_THUMBNAIL_URI))
 
                     var phoneNumber: String? = null
                     var birthDateString: String? = null
 
-                    // Запрос номера телефона (остается без изменений)
                     val phoneCursor = contentResolver.query(
                         ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
                         arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
@@ -83,7 +82,6 @@ class SocialSyncRepositoryImpl @Inject constructor(
                     }
                     phoneCursor?.close()
 
-                    // Запрос даты рождения (остается без изменений)
                     val eventSelection = (
                         ContactsContract.Data.CONTACT_ID + " = ? AND " +
                         ContactsContract.Data.MIMETYPE + " = ? AND " +
@@ -114,7 +112,6 @@ class SocialSyncRepositoryImpl @Inject constructor(
                     val firstName = nameParts.getOrNull(0) ?: ""
                     val lastName = nameParts.getOrNull(1) ?: ""
 
-                    // Условие добавления контакта остается прежним, но теперь передаем и photoUri
                     if (firstName.isNotBlank() && birthDateString != null) {
                          deviceContacts.add(
                             Contact(
@@ -123,7 +120,7 @@ class SocialSyncRepositoryImpl @Inject constructor(
                                 lastName = lastName,
                                 phoneNumber = phoneNumber,
                                 birthDate = birthDateString,
-                                photoUri = photoUri // <-- ПЕРЕДАЕМ URI ФОТО
+                                photoUri = photoUri
                             )
                         )
                     } else if (firstName.isNotBlank() && birthDateString == null) {
@@ -165,5 +162,14 @@ class SocialSyncRepositoryImpl @Inject constructor(
 
     override suspend fun deleteEvent(event: Event) {
         eventDao.delete(event)
+    }
+
+    override suspend fun updateEventGeneratedGreetings(eventId: Long, greetings: List<String>?) {
+        eventDao.updateGeneratedGreetings(eventId, greetings)
+    }
+
+    // Реализация нового метода
+    override fun getEventByContactIdAndType(contactId: Long, eventType: String): Flow<Event?> {
+        return eventDao.getEventByContactIdAndType(contactId, eventType)
     }
 }

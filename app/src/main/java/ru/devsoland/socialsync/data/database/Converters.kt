@@ -2,9 +2,12 @@ package ru.devsoland.socialsync.data.database
 
 import androidx.room.TypeConverter
 import java.time.LocalDate
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json // <-- ДОБАВЛЕН ЭТОТ ИМПОРТ
+// import kotlinx.serialization.decodeFromString // Этот импорт не обязателен, если используется Json.decodeFromString
 
 class Converters {
-    // Конвертеры для LocalDate (существующие)
+    // Конвертеры для LocalDate
     @TypeConverter
     fun fromTimestamp(value: Long?): LocalDate? {
         return value?.let { LocalDate.ofEpochDay(it) }
@@ -15,18 +18,14 @@ class Converters {
         return date?.toEpochDay()
     }
 
-    // Конвертеры для List<String> (новые)
-    private val TAG_DELIMITER = "," // Можно выбрать другой, если запятая может быть в тегах
-
+    // Конвертеры для List<String> с использованием JSON
     @TypeConverter
-    fun fromTagsList(tags: List<String>?): String? {
-        return tags?.joinToString(TAG_DELIMITER)
+    fun fromStringList(list: List<String>?): String? {
+        return list?.let { Json.encodeToString(it) }
     }
 
     @TypeConverter
-    fun toTagsList(tagsString: String?): List<String> {
-        // Возвращаем пустой список, если строка null или пуста,
-        // чтобы соответствовать значению по умолчанию List<String> = emptyList() в Contact
-        return tagsString?.split(TAG_DELIMITER)?.filter { it.isNotBlank() } ?: emptyList()
+    fun toStringList(jsonString: String?): List<String>? {
+        return jsonString?.let { Json.decodeFromString<List<String>>(it) }
     }
 }

@@ -29,4 +29,11 @@ interface EventDao {
 
     @Query("SELECT * FROM events WHERE id = :eventId")
     fun getEventById(eventId: Long): Flow<Event?>
+
+    @Query("UPDATE events SET generatedGreetings = :greetings WHERE id = :eventId")
+    suspend fun updateGeneratedGreetings(eventId: Long, greetings: List<String>?)
+
+    // Новый метод для получения события "День рождения" для конкретного контакта
+    @Query("SELECT * FROM events WHERE contactId = :contactId AND eventType = :eventType LIMIT 1")
+    fun getEventByContactIdAndType(contactId: Long, eventType: String): Flow<Event?>
 }

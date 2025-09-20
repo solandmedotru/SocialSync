@@ -28,8 +28,9 @@ import androidx.navigation.navArgument
 import dagger.hilt.android.AndroidEntryPoint
 import ru.devsoland.socialsync.ui.AppDestinations
 import ru.devsoland.socialsync.ui.addcontact.AddContactScreen
+import ru.devsoland.socialsync.ui.aigreeting.AiGreetingPromptScreen // <-- ДОБАВЛЕН ИМПОРТ
 import ru.devsoland.socialsync.ui.contacts.ContactListScreen
-import ru.devsoland.socialsync.ui.editcontact.EditContactScreen // <-- ДОБАВЛЕН ИМПОРТ
+import ru.devsoland.socialsync.ui.editcontact.EditContactScreen
 import ru.devsoland.socialsync.ui.eventdetail.EventDetailScreen
 import ru.devsoland.socialsync.ui.events.EventsScreen
 import ru.devsoland.socialsync.ui.profile.ProfileScreen
@@ -73,11 +74,12 @@ fun AppNavigator() {
 
     val isEventDetailScreen = currentRoute?.startsWith("event_detail/") == true
     val isEditContactScreen = currentRoute?.startsWith("edit_contact/") == true
+    val isAiGreetingPromptScreen = currentRoute?.startsWith("ai_greeting_prompt/") == true
 
     val showBottomBarAndFabAndMainTopBar = currentRoute !in listOf(
         AppDestinations.WELCOME_ROUTE,
         AppDestinations.ADD_CONTACT_ROUTE
-    ) && !isEventDetailScreen && !isEditContactScreen
+    ) && !isEventDetailScreen && !isEditContactScreen && !isAiGreetingPromptScreen
 
     Scaffold(
         topBar = {
@@ -165,6 +167,19 @@ fun AppNavigator() {
                 arguments = listOf(navArgument(AppDestinations.EDIT_CONTACT_ID_ARG) { type = NavType.LongType })
             ) { 
                 EditContactScreen(navController = navController)
+            }
+            composable(
+                route = AppDestinations.AI_GREETING_PROMPT_ROUTE_PATTERN,
+                arguments = listOf(
+                    navArgument(AppDestinations.AI_GREETING_PROMPT_CONTACT_ID_ARG) { 
+                        type = NavType.LongType 
+                    },
+                    navArgument(AppDestinations.AI_GREETING_PROMPT_EVENT_ID_ARG) { 
+                        type = NavType.LongType 
+                    }
+                )
+            ) { 
+                AiGreetingPromptScreen(navController = navController)
             }
         }
     }

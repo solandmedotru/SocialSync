@@ -15,7 +15,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import ru.devsoland.socialsync.data.dao.ContactDao
 import ru.devsoland.socialsync.data.dao.EventDao
-import ru.devsoland.socialsync.data.database.AppDatabase // Убедитесь, что MIGRATION_1_2 здесь доступен
+// Убедитесь, что MIGRATION_1_2 и MIGRATION_2_3 доступны через AppDatabase.Companion
+import ru.devsoland.socialsync.data.database.AppDatabase 
 import ru.devsoland.socialsync.data.model.Contact
 import ru.devsoland.socialsync.data.repository.SocialSyncRepository
 import ru.devsoland.socialsync.data.repository.SocialSyncRepositoryImpl
@@ -40,7 +41,7 @@ object AppModule {
     @Singleton
     fun provideAppDatabase(
         @ApplicationContext appContext: Context,
-        contactDaoProvider: Provider<ContactDao>, // Provider для ContactDao
+        contactDaoProvider: Provider<ContactDao>, 
         @ApplicationScope applicationScope: CoroutineScope
     ): AppDatabase {
         return Room.databaseBuilder(
@@ -51,10 +52,8 @@ object AppModule {
         .addCallback(object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
-                // Этот код выполнится только при САМОМ ПЕРВОМ создании БД (когда версия еще не 1)
                 applicationScope.launch {
-                    val contactDao = contactDaoProvider.get() // Получаем ContactDao через Provider
-                    // Предзаполнение данных. Поле tags будет иметь значение по умолчанию (пустой список)
+                    val contactDao = contactDaoProvider.get() 
                     contactDao.insert(Contact(firstName = "Иван", lastName = "Петров", phoneNumber = "123-45-67", birthDate = "1990-05-15"))
                     contactDao.insert(Contact(firstName = "Мария", lastName = "Сидорова", phoneNumber = "987-65-43", birthDate = "1992-10-20"))
                     contactDao.insert(Contact(firstName = "Алексей", lastName = "Смирнов", phoneNumber = "555-12-34", birthDate = "1985-02-01"))
@@ -63,7 +62,8 @@ object AppModule {
                 }
             }
         })
-        .addMigrations(AppDatabase.MIGRATION_1_2) // <-- ДОБАВЛЕНА РЕГИСТРАЦИЯ МИГРАЦИИ
+        // Регистрируем ОБЕ миграции в правильном порядке
+        .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3) 
         .build()
     }
 
@@ -80,7 +80,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideSocialSyncRepository(
-        @ApplicationContext context: Context,
+        @ApplicationContext context: Context, // Контекст может быть не нужен здесь, если репозиторий его не использует
         contactDao: ContactDao,
         eventDao: EventDao
     ): SocialSyncRepository {

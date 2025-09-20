@@ -12,12 +12,12 @@ data class Contact(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
     val deviceContactId: String? = null,
-    val lastName: String? = null, // Сделаем nullable на случай, если есть только имя
-    val firstName: String,
+    val lastName: String? = null, 
+    val firstName: String? = null, // <-- СДЕЛАНО NULLABLE
     val middleName: String? = null,
-    val birthDate: String?,
+    val birthDate: String? = null,
     val phoneNumber: String? = null,
     val photoUri: String? = null,
     val notes: String? = null,
-    val tags: List<String> = emptyList() // <-- НОВОЕ ПОЛЕ ДЛЯ ТЕГОВ
+    val tags: List<String> = emptyList()
 )

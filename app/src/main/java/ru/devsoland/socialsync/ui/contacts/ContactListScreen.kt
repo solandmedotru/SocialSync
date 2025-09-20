@@ -2,6 +2,7 @@ package ru.devsoland.socialsync.ui.contacts
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -62,66 +63,96 @@ import java.time.format.DateTimeParseException
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
+private const val DEBUG_TAG = "FormatBirthDate"
+
 @Composable
 fun formatBirthDateWithDaysUntil(birthDateString: String?): String {
+    Log.d(DEBUG_TAG, "Input birthDateString: '$birthDateString'")
     if (birthDateString.isNullOrBlank()) {
+        Log.d(DEBUG_TAG, "Date is null or blank, returning 'not specified'.")
         return stringResource(R.string.birth_date_not_specified)
     }
+
     val today = LocalDate.now()
     var parsedDate: LocalDate? = null
     var isYearKnown = true
+
     try {
         val fullDate = LocalDate.parse(birthDateString, DateTimeFormatter.ISO_LOCAL_DATE)
+        Log.d(DEBUG_TAG, "Successfully parsed as full ISO_LOCAL_DATE: $fullDate")
         if (fullDate.year >= 1800) { 
             parsedDate = fullDate
+            Log.d(DEBUG_TAG, "Year is known (>=1800). parsedDate: $parsedDate")
         } else { 
             parsedDate = LocalDate.of(today.year, fullDate.month, fullDate.dayOfMonth)
             isYearKnown = false
+            Log.d(DEBUG_TAG, "Year is unknown or invalid (<1800), using current year. parsedDate: $parsedDate")
         }
     } catch (e: DateTimeParseException) {
+        Log.d(DEBUG_TAG, "Failed to parse as full ISO_LOCAL_DATE. Error: ${e.message}. Trying --MM-DD format.")
         if (birthDateString.startsWith("--") && birthDateString.length == 7) {
             try {
                 val monthDayPart = birthDateString.substring(2)
                 val monthDay = MonthDay.parse(monthDayPart, DateTimeFormatter.ofPattern("MM-dd"))
                 parsedDate = monthDay.atYear(today.year)
                 isYearKnown = false
+                Log.d(DEBUG_TAG, "Successfully parsed as --MM-DD. monthDay: $monthDay, parsedDate (current year): $parsedDate")
             } catch (e2: DateTimeParseException) {
+                Log.d(DEBUG_TAG, "Failed to parse as --MM-DD. Error: ${e2.message}. Returning original string.")
                 return birthDateString 
             }
         } else {
+            Log.d(DEBUG_TAG, "Not YYYY-MM-DD and not starting with '--'. Returning original string.")
             return birthDateString 
         }
     }
-    if (parsedDate == null) return birthDateString
+
+    if (parsedDate == null) { // Should not happen if parsing was successful in one of the branches
+        Log.d(DEBUG_TAG, "parsedDate is unexpectedly null after try-catch blocks. Returning original string.")
+        return birthDateString
+    }
+
     val birthDateFormatted = if (isYearKnown) {
         parsedDate.format(DateTimeFormatter.ofPattern("d MMMM yyyy 'г.'", Locale("ru")))
     } else {
         parsedDate.format(DateTimeFormatter.ofPattern("d MMMM", Locale("ru")))
     }
+    Log.d(DEBUG_TAG, "Formatted birth date part: '$birthDateFormatted'")
+
     var nextBirthday = parsedDate.withYear(today.year)
     if (nextBirthday.isBefore(today)) {
         nextBirthday = nextBirthday.plusYears(1)
     }
     val daysUntil = ChronoUnit.DAYS.between(today, nextBirthday)
+    Log.d(DEBUG_TAG, "Calculated nextBirthday: $nextBirthday, daysUntil: $daysUntil")
+
     val daysUntilString = when {
         daysUntil == 0L -> stringResource(R.string.birthday_today)
         daysUntil > 0L -> stringResource(R.string.birthday_in_days, daysUntil, getDaysWord(daysUntil))
-        else -> ""
+        else -> "" // This case should ideally not be hit if nextBirthday logic is correct
     }
-    return "$birthDateFormatted $daysUntilString".trim()
+    Log.d(DEBUG_TAG, "Days until string part: '$daysUntilString'")
+
+    val finalString = "$birthDateFormatted $daysUntilString".trim()
+    Log.d(DEBUG_TAG, "Final formatted string: '$finalString'")
+    return finalString
 }
 
-@Composable // <-- ДОБАВЛЕНА АННОТАЦИЯ @Composable
+@Composable
 fun getDaysWord(days: Long): String {
     val absDays = Math.abs(days)
     val lastDigit = absDays % 10
     val lastTwoDigits = absDays % 100
-    if (lastTwoDigits in 11L..19L) return stringResource(R.string.days_word_plural_5_many)
-    return when (lastDigit) {
+    // Логирование для getDaysWord, если нужно
+    // Log.d(DEBUG_TAG, "getDaysWord input: $days") 
+    val result = if (lastTwoDigits in 11L..19L) stringResource(R.string.days_word_plural_5_many)
+    else when (lastDigit) {
         1L -> stringResource(R.string.days_word_singular_1)
         in 2L..4L -> stringResource(R.string.days_word_plural_2_4)
         else -> stringResource(R.string.days_word_plural_5_many)
     }
+    // Log.d(DEBUG_TAG, "getDaysWord output: '$result'")
+    return result
 }
 
 @OptIn(ExperimentalLayoutApi::class) 
@@ -237,7 +268,7 @@ fun ContactListItem(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = formatBirthDateWithDaysUntil(contact.birthDate), // Эта функция теперь @Composable
+                text = formatBirthDateWithDaysUntil(contact.birthDate),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

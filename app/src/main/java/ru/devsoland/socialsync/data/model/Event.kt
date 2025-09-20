@@ -2,7 +2,7 @@ package ru.devsoland.socialsync.data.model
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
-import androidx.room.Index // <-- ДОБАВЛЕН ИМПОРТ
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.time.LocalDate
 
@@ -16,7 +16,7 @@ import java.time.LocalDate
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["contactId"])] // <-- ДОБАВЛЕН ИНДЕКС ДЛЯ contactId
+    indices = [Index(value = ["contactId"])]
 )
 data class Event(
     @PrimaryKey(autoGenerate = true)
@@ -26,5 +26,6 @@ data class Event(
     val date: LocalDate,
     val eventType: String,
     val isRecurring: Boolean = true,
-    val notes: String? = null
+    val notes: String? = null,
+    val generatedGreetings: List<String>? = null // <-- ДОБАВЛЕНО ПОЛЕ
 )

@@ -13,7 +13,7 @@ interface SocialSyncRepository {
     suspend fun updateContact(contact: Contact)
     suspend fun deleteContact(contact: Contact)
     suspend fun fetchDeviceContacts(): List<Contact>
-    suspend fun getContactByDeviceContactId(deviceContactId: String): Contact? // <-- НОВЫЙ МЕТОД
+    suspend fun getContactByDeviceContactId(deviceContactId: String): Contact? 
 
     // --- События ---
     fun getAllEvents(): Flow<List<Event>>
@@ -22,4 +22,8 @@ interface SocialSyncRepository {
     suspend fun insertEvent(event: Event): Long
     suspend fun updateEvent(event: Event)
     suspend fun deleteEvent(event: Event)
+    suspend fun updateEventGeneratedGreetings(eventId: Long, greetings: List<String>?)
+
+    // Новый метод для получения события по ID контакта и типу
+    fun getEventByContactIdAndType(contactId: Long, eventType: String): Flow<Event?>
 }

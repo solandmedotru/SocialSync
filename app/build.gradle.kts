@@ -4,11 +4,28 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.ksp)
     alias(libs.plugins.hilt.android.gradle)
+    alias(libs.plugins.kotlin.serialization) // <-- ДОБАВЛЕН ПЛАГИН
 }
 
 android {
     namespace = "ru.devsoland.socialsync"
     compileSdk = 36
+
+    packaging {
+        resources {
+            excludes += "/META-INF/INDEX.LIST"
+            // Вы также можете здесь исключить другие распространенные конфликтующие файлы, если они появятся:
+            excludes += "/META-INF/DEPENDENCIES"
+            // excludes += "/META-INF/LICENSE"
+            // excludes += "/META-INF/LICENSE.txt"
+            // excludes += "/META-INF/LICENSE.md"
+            // excludes += "/META-INF/NOTICE"
+            // excludes += "/META-INF/NOTICE.txt"
+            // excludes += "/META-INF/NOTICE.md"
+            // excludes += "/META-INF/ASL2.0"
+            // excludes += "/META-INF/*.kotlin_module"
+        }
+    }
 
     defaultConfig {
         applicationId = "ru.devsoland.socialsync"
@@ -18,6 +35,14 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "GEMINI_API_KEY",
+            "\"${project.findProperty("GEMINI_API_KEY") ?: "your_api_key_here"}\""
+        )
+
+
     }
 
     buildTypes {
@@ -28,6 +53,14 @@ android {
                 "proguard-rules.pro"
             )
         }
+        debug {
+            buildConfigField(
+                "String",
+                "GEMINI_API_KEY",
+                "\"${project.findProperty("GEMINI_API_KEY") ?: "your_api_key_here"}\""
+            )
+        }
+
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -35,6 +68,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -54,6 +88,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation("androidx.compose.material:material-icons-core")
+    implementation("androidx.compose.material:material-icons-extended")
 
     // Navigation Compose
     implementation(libs.androidx.navigation.compose)
@@ -65,7 +101,11 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.compose.foundation)
+    implementation(libs.generativeai)
     ksp(libs.androidx.room.compiler)
+
+    // Kotlinx Serialization
+    implementation(libs.kotlinx.serialization.json) // <-- ДОБАВЛЕНА ЗАВИСИМОСТЬ
 
     // Hilt
     implementation(libs.hilt.android)
@@ -74,6 +114,8 @@ dependencies {
 
     // Calendar
     implementation("com.kizitonwose.calendar:compose:2.8.0")
+
+    implementation("com.google.genai:google-genai:1.17.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
