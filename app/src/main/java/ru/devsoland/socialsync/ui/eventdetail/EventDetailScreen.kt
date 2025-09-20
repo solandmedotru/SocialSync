@@ -32,6 +32,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import ru.devsoland.socialsync.R
 import ru.devsoland.socialsync.data.model.Event
+import ru.devsoland.socialsync.ui.AppDestinations // Убедимся, что AppDestinations импортирован
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -70,7 +71,8 @@ fun EventDetailScreen(
                 actions = {
                     contactData?.let { unwrappedContact ->
                         IconButton(onClick = {
-                            navController.navigate(ru.devsoland.socialsync.ui.AppDestinations.editContactRoute(unwrappedContact.id))
+                            // Изменено здесь:
+                            navController.navigate(AppDestinations.addEditContactRoute(unwrappedContact.id))
                         }) {
                             Icon(
                                 imageVector = Icons.Filled.Edit,
@@ -205,7 +207,7 @@ fun EventDetailScreen(
                             val eventIdToPass = birthdayEventId
                             if (eventIdToPass != null && eventIdToPass != 0L) { 
                                 navController.navigate(
-                                    ru.devsoland.socialsync.ui.AppDestinations.aiGreetingPromptRoute(currentContact.id, eventIdToPass)
+                                    AppDestinations.aiGreetingPromptRoute(currentContact.id, eventIdToPass)
                                 )
                             } else {
                                 println("EventDetailScreen: Birthday event ID is null or 0, cannot navigate to AI prompt.")
@@ -369,31 +371,25 @@ fun DeleteConfirmDialog(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = {
-            Text(text = stringResource(R.string.delete_greeting_confirm_title)) // Нужна новая строка
+            Text(text = stringResource(R.string.delete_greeting_dialog_title))
         },
         text = {
-            Text(text = stringResource(R.string.delete_greeting_confirm_text)) // Нужна новая строка
+            Text(text = stringResource(R.string.delete_greeting_text))
         },
         confirmButton = {
             Button(
-                onClick = onConfirm
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
-                Text(stringResource(R.string.delete_button_label)) // Нужна новая строка
+                Text(stringResource(R.string.delete_button_label))
             }
         },
         dismissButton = {
             TextButton(
                 onClick = onDismissRequest
             ) {
-                Text(stringResource(R.string.cancel_button_label)) // Эта строка уже есть
+                Text(stringResource(R.string.cancel_button_label))
             }
         }
     )
 }
-
-
-// TODO: Добавить строки ресурсов в strings.xml:
-// <string name="delete_greeting_confirm_title">Подтверждение удаления</string>
-// <string name="delete_greeting_confirm_text">Вы уверены, что хотите удалить это поздравление?</string>
-// <string name="delete_button_label">Удалить</string>
-

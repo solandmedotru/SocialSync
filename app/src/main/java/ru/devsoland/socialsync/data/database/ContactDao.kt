@@ -1,4 +1,4 @@
-package ru.devsoland.socialsync.data.dao
+package ru.devsoland.socialsync.data.database
 
 import androidx.room.Dao
 import androidx.room.Delete
@@ -12,7 +12,7 @@ import ru.devsoland.socialsync.data.model.Contact
 @Dao
 interface ContactDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.Companion.REPLACE)
     suspend fun insert(contact: Contact): Long
 
     @Update

@@ -9,8 +9,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 // import kotlinx.coroutines.CoroutineScope // Не используется, если AppDatabaseCallback закомментирован
 // import kotlinx.coroutines.launch // Не используется, если AppDatabaseCallback закомментирован
-import ru.devsoland.socialsync.data.dao.ContactDao
-import ru.devsoland.socialsync.data.dao.EventDao
+import ru.devsoland.socialsync.data.database.ContactDao // ИСПРАВЛЕННЫЙ ИМПОРТ
+import ru.devsoland.socialsync.data.database.EventDao   // ИСПРАВЛЕННЫЙ ИМПОРТ
 import ru.devsoland.socialsync.data.model.Contact
 import ru.devsoland.socialsync.data.model.Event
 // import ru.devsoland.socialsync.di.ApplicationScope // Не используется, если AppDatabaseCallback закомментирован
@@ -19,8 +19,8 @@ import ru.devsoland.socialsync.data.model.Event
 @Database(entities = [Contact::class, Event::class], version = 3, exportSchema = false) // <-- ВЕРСИЯ УВЕЛИЧЕНА ДО 3
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
-    abstract fun contactDao(): ContactDao
-    abstract fun eventDao(): EventDao
+    abstract fun contactDao(): ContactDao // Теперь будет использовать правильный тип
+    abstract fun eventDao(): EventDao     // Теперь будет использовать правильный тип
 
     companion object {
         // Миграция с версии 1 на версию 2: добавление столбца tags в contacts

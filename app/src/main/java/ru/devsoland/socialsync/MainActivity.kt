@@ -27,10 +27,10 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.navArgument
 import dagger.hilt.android.AndroidEntryPoint
 import ru.devsoland.socialsync.ui.AppDestinations
-import ru.devsoland.socialsync.ui.addcontact.AddContactScreen
-import ru.devsoland.socialsync.ui.aigreeting.AiGreetingPromptScreen // <-- ДОБАВЛЕН ИМПОРТ
+// import ru.devsoland.socialsync.ui.addcontact.AddContactScreen // Старый импорт, будет удален
+import ru.devsoland.socialsync.ui.addeditcontact.AddEditContactScreen // Новый импорт
+import ru.devsoland.socialsync.ui.aigreeting.AiGreetingPromptScreen
 import ru.devsoland.socialsync.ui.contacts.ContactListScreen
-import ru.devsoland.socialsync.ui.editcontact.EditContactScreen
 import ru.devsoland.socialsync.ui.eventdetail.EventDetailScreen
 import ru.devsoland.socialsync.ui.events.EventsScreen
 import ru.devsoland.socialsync.ui.profile.ProfileScreen
@@ -72,14 +72,14 @@ fun AppNavigator() {
 
     val currentRoute = currentDestination?.route
 
-    val isEventDetailScreen = currentRoute?.startsWith("event_detail/") == true
-    val isEditContactScreen = currentRoute?.startsWith("edit_contact/") == true
-    val isAiGreetingPromptScreen = currentRoute?.startsWith("ai_greeting_prompt/") == true
+    val isEventDetailScreen = currentRoute?.startsWith("${AppDestinations.EVENT_DETAIL_ROUTE_PATTERN.substringBefore("/")}/") == true
+    val isAddEditContactScreen = currentRoute?.startsWith("${AppDestinations.ADD_EDIT_CONTACT_ROUTE_BASE}/") == true
+    val isAiGreetingPromptScreen = currentRoute?.startsWith("${AppDestinations.AI_GREETING_PROMPT_ROUTE_PATTERN.substringBefore("/")}/") == true
 
     val showBottomBarAndFabAndMainTopBar = currentRoute !in listOf(
         AppDestinations.WELCOME_ROUTE,
-        AppDestinations.ADD_CONTACT_ROUTE
-    ) && !isEventDetailScreen && !isEditContactScreen && !isAiGreetingPromptScreen
+        // AppDestinations.ADD_CONTACT_ROUTE // Старый маршрут, больше не нужен для скрытия UI
+    ) && !isEventDetailScreen && !isAddEditContactScreen && !isAiGreetingPromptScreen
 
     Scaffold(
         topBar = {
@@ -119,9 +119,11 @@ fun AppNavigator() {
             }
         },
         floatingActionButton = {
+            // Обновим условие для FAB - теперь он должен вести на AddEditContactScreen
             if (currentRoute == AppDestinations.CONTACT_LIST_ROUTE && showBottomBarAndFabAndMainTopBar) {
                 FloatingActionButton(onClick = {
-                    navController.navigate(AppDestinations.ADD_CONTACT_ROUTE)
+                    // Навигация для создания нового контакта
+                    navController.navigate(AppDestinations.addEditContactRoute(AppDestinations.DEFAULT_NEW_CONTACT_ID))
                 }) {
                     Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_contact_description))
                 }
@@ -153,21 +155,28 @@ fun AppNavigator() {
             composable(AppDestinations.PROFILE_ROUTE) {
                 ProfileScreen()
             }
-            composable(AppDestinations.ADD_CONTACT_ROUTE) {
-                AddContactScreen() 
-            }
+            // Старый маршрут для AddContactScreen - закомментирован или удалить
+            // composable(AppDestinations.ADD_CONTACT_ROUTE) {
+            //     AddContactScreen() 
+            // }
             composable(
                 route = AppDestinations.EVENT_DETAIL_ROUTE_PATTERN,
                 arguments = listOf(navArgument(AppDestinations.EVENT_DETAIL_CONTACT_ID_ARG) { type = NavType.LongType })
             ) {
                 EventDetailScreen(navController = navController)
             }
+            
+            // Обновленный composable для AddEditContactScreen
             composable(
-                route = AppDestinations.EDIT_CONTACT_ROUTE_PATTERN,
-                arguments = listOf(navArgument(AppDestinations.EDIT_CONTACT_ID_ARG) { type = NavType.LongType })
+                route = AppDestinations.ADD_EDIT_CONTACT_ROUTE_PATTERN,
+                arguments = listOf(navArgument(AppDestinations.CONTACT_ID_ARG) { 
+                    type = NavType.LongType
+                    defaultValue = AppDestinations.DEFAULT_NEW_CONTACT_ID // Значение по умолчанию для нового контакта
+                })
             ) { 
-                EditContactScreen(navController = navController)
+                AddEditContactScreen(navController = navController)
             }
+
             composable(
                 route = AppDestinations.AI_GREETING_PROMPT_ROUTE_PATTERN,
                 arguments = listOf(

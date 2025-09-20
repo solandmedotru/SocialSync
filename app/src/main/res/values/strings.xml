@@ -47,7 +47,7 @@
     <string name="ai_greeting_keywords_label">Ключевые слова для поздравления</string>
     <string name="ai_greeting_keywords_hint">Ключевые слова</string>
     <string name="ai_greeting_keywords_placeholder">Введите Ключевые слова</string>
-    <string name="tags_label">Тэги</string>
+    <string name="tags_label">Это: </string>
     <string name="generate_ai_greeting_button">Сгенерировать поздравления с ИИ</string>
     <string name="ai_greeting_results_title">Результат генерации</string>
     <string name="ai_greeting_copy_description">Ai greeting copy description</string>
@@ -80,4 +80,10 @@
     <string name="delete_contact_confirm_title">Удалить контакт?</string>
     <string name="delete_contact_confirm_text">Вы уверены, что хотите удалить контакт %1$s? Это действие также удалит все связанные с ним события.</string>
     <string name="delete_contact_description">Удалить контакт</string>
+    <string name="delete_greeting_dialog_title">Подтверждение удаления</string>
+    <string name="delete_greeting_text">Вы уверены, что хотите удалить это</string>
+
+    <string name="select_date_description">Выберите дату рождения</string>
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_cancel">Отмена</string>
 </resources>

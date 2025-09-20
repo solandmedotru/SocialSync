@@ -1,5 +1,6 @@
-package ru.devsoland.socialsync.ui.editcontact
+package ru.devsoland.socialsync.ui.addeditcontact
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,8 +23,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange // Для иконки календаря
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,17 +37,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope // Не используется, можно удалить
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -51,32 +58,47 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-// import kotlinx.coroutines.launch // Не используется, можно удалить
+import kotlinx.coroutines.flow.collectLatest
 import ru.devsoland.socialsync.R
+import ru.devsoland.socialsync.ui.AppDestinations
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun EditContactScreen(
+fun AddEditContactScreen(
     navController: NavController,
-    viewModel: EditContactViewModel = hiltViewModel()
+    viewModel: AddEditContactViewModel = hiltViewModel()
 ) {
-    // val coroutineScope = rememberCoroutineScope() // Не используется
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val firstName by viewModel.firstName.collectAsState()
     val lastName by viewModel.lastName.collectAsState()
     val phoneNumber by viewModel.phoneNumber.collectAsState()
-    val birthDate by viewModel.birthDate.collectAsState()
+    val birthDate by viewModel.birthDate.collectAsState() // String? "YYYY-MM-DD"
     val originalContact by viewModel.contactState.collectAsState()
 
     val currentTags by viewModel.tags.collectAsState()
     val suggestedTags = viewModel.suggestedTags
     var customTagInput by remember { mutableStateOf("") }
 
+    val contactId = viewModel.currentContactId
+    val isLoadingExistingContact = contactId != AppDestinations.DEFAULT_NEW_CONTACT_ID && originalContact == null
+
+    LaunchedEffect(key1 = Unit) {
+        viewModel.saveSuccessEvent.collectLatest {
+            navController.popBackStack()
+        }
+    }
+
+    // State for DatePickerDialog
+    var showDatePicker by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(id = R.string.edit_contact_screen_title)) },
+                title = {
+                    Text(stringResource(id = if (contactId == AppDestinations.DEFAULT_NEW_CONTACT_ID) R.string.add_contact_screen_title else R.string.edit_contact_screen_title))
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
@@ -86,10 +108,7 @@ fun EditContactScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        viewModel.saveContact()
-                        navController.popBackStack()
-                    }) {
+                    IconButton(onClick = { viewModel.saveContact() }) {
                         Icon(
                             imageVector = Icons.Filled.Done,
                             contentDescription = stringResource(R.string.save_contact_description)
@@ -104,7 +123,7 @@ fun EditContactScreen(
             )
         }
     ) { innerPadding ->
-        if (originalContact == null) {
+        if (isLoadingExistingContact) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentAlignment = Alignment.Center
@@ -147,12 +166,24 @@ fun EditContactScreen(
                     singleLine = true
                 )
                 Spacer(modifier = Modifier.height(12.dp))
+
                 OutlinedTextField(
-                    value = birthDate ?: "",
-                    onValueChange = { viewModel.birthDate.value = it },
+                    value = birthDate ?: "", // Отображаем YYYY-MM-DD или пусто
+                    onValueChange = { /* Изменения только через DatePicker */ },
+                    readOnly = true,
                     label = { Text(stringResource(R.string.birth_date_label)) },
-                    placeholder = { Text(stringResource(R.string.birth_date_placeholder)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(stringResource(R.string.birth_date_placeholder)) }, // ГГГГ-ММ-ДД
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true },
+                    trailingIcon = {
+                        IconButton(onClick = { showDatePicker = true }) {
+                            Icon(
+                                Icons.Filled.DateRange,
+                                contentDescription = stringResource(id = R.string.select_date_description) // Новый ресурс
+                            )
+                        }
+                    },
                     singleLine = true
                 )
 
@@ -241,6 +272,53 @@ fun EditContactScreen(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
+        }
+    }
+
+    // DatePickerDialog
+    if (showDatePicker) {
+        val calendar = Calendar.getInstance()
+        var initialSelectedDateMillis: Long? = null
+        birthDate?.let {
+            if (it.matches(Regex("^\\d{4}-\\d{2}-\\d{2}$"))) { // Простая проверка на YYYY-MM-DD
+                try {
+                    val parts = it.split("-")
+                    calendar.set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt())
+                    initialSelectedDateMillis = calendar.timeInMillis
+                } catch (e: Exception) {
+                    // Оставить initialSelectedDateMillis null, DatePicker использует текущую дату
+                }
+            }
+        }
+
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = initialSelectedDateMillis, // Может быть null
+            yearRange = IntRange(1900, Calendar.getInstance().get(Calendar.YEAR)) // Ограничиваем диапазон годов
+        )
+
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val selectedCalendar = Calendar.getInstance().apply { timeInMillis = millis }
+                            val year = selectedCalendar.get(Calendar.YEAR)
+                            val month = selectedCalendar.get(Calendar.MONTH) + 1 // Calendar.MONTH 0-indexed
+                            val day = selectedCalendar.get(Calendar.DAY_OF_MONTH)
+                            viewModel.birthDate.value = String.format("%04d-%02d-%02d", year, month, day)
+                        }
+                        showDatePicker = false
+                    }
+                ) { Text(stringResource(id = R.string.dialog_ok)) } // Новый ресурс
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDatePicker = false }
+                ) { Text(stringResource(id = R.string.dialog_cancel)) } // Новый ресурс
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }

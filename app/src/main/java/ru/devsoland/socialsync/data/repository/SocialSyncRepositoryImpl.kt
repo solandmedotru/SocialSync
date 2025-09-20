@@ -7,10 +7,12 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
-import ru.devsoland.socialsync.data.dao.ContactDao
-import ru.devsoland.socialsync.data.dao.EventDao
+import ru.devsoland.socialsync.data.database.ContactDao
+import ru.devsoland.socialsync.data.database.EventDao
 import ru.devsoland.socialsync.data.model.Contact
 import ru.devsoland.socialsync.data.model.Event
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 class SocialSyncRepositoryImpl @Inject constructor(
@@ -157,23 +159,68 @@ class SocialSyncRepositoryImpl @Inject constructor(
     }
 
     override suspend fun insertEvent(event: Event): Long {
-        return eventDao.insert(event)
+        return eventDao.insertEvent(event)
     }
 
     override suspend fun updateEvent(event: Event) {
-        eventDao.update(event)
+        eventDao.updateEvent(event)
     }
 
     override suspend fun deleteEvent(event: Event) {
-        eventDao.delete(event)
+        eventDao.deleteEvent(event)
     }
 
     override suspend fun updateEventGeneratedGreetings(eventId: Long, greetings: List<String>?) {
-        eventDao.updateGeneratedGreetings(eventId, greetings)
+        eventDao.updateEventGeneratedGreetings(eventId, greetings)
     }
 
-    // Реализация нового метода
     override fun getEventByContactIdAndType(contactId: Long, eventType: String): Flow<Event?> {
         return eventDao.getEventByContactIdAndType(contactId, eventType)
+    }
+
+    override suspend fun manageBirthdayEventForContact(
+        contactId: Long,
+        birthDate: String?, // Формат YYYY-MM-DD или null
+        contactFirstName: String
+    ) {
+        val existingBirthdayEvent = eventDao.getBirthdayEventForContactSuspend(contactId)
+        val eventNameValue = "${EventDao.DEFAULT_BIRTHDAY_EVENT_TYPE} $contactFirstName"
+        // Конвертер для даты, если понадобится создавать/обновлять событие
+        val birthLocalDate: LocalDate? = birthDate?.takeIf { it.isNotBlank() }?.let {
+            try {
+                LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE) // ISO_LOCAL_DATE это YYYY-MM-DD
+            } catch (e: Exception) {
+                null // В случае ошибки парсинга, считаем, что даты нет
+            }
+        }
+
+        if (birthLocalDate != null) {
+            // Дата рождения указана и корректна, создаем или обновляем событие
+            if (existingBirthdayEvent != null) {
+                // Событие существует, обновляем его
+                val updatedEvent = existingBirthdayEvent.copy(
+                    name = eventNameValue, // Исправлено на name
+                    date = birthLocalDate,  // Исправлено на LocalDate
+                    isRecurring = true 
+                )
+                eventDao.updateEvent(updatedEvent)
+            } else {
+                // События не существует, создаем новое
+                val newEvent = Event(
+                    contactId = contactId,
+                    name = eventNameValue, // Исправлено на name
+                    eventType = EventDao.DEFAULT_BIRTHDAY_EVENT_TYPE,
+                    date = birthLocalDate,  // Исправлено на LocalDate
+                    isRecurring = true 
+                )
+                eventDao.insertEvent(newEvent)
+            }
+        } else {
+            // Дата рождения не указана, некорректна или удалена. 
+            // Удаляем существующее событие ДР, если оно есть.
+            if (existingBirthdayEvent != null) {
+                eventDao.deleteEventsByContactIdAndType(contactId, EventDao.DEFAULT_BIRTHDAY_EVENT_TYPE)
+            }
+        }
     }
 }

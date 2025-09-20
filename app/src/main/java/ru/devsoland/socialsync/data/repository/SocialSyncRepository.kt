@@ -1,6 +1,7 @@
 package ru.devsoland.socialsync.data.repository
 
 import kotlinx.coroutines.flow.Flow
+import ru.devsoland.socialsync.data.database.EventDao
 import ru.devsoland.socialsync.data.model.Contact
 import ru.devsoland.socialsync.data.model.Event
 
@@ -27,4 +28,11 @@ interface SocialSyncRepository {
 
     // Новый метод для получения события по ID контакта и типу
     fun getEventByContactIdAndType(contactId: Long, eventType: String): Flow<Event?>
+
+    // Новый метод для управления событием "День рождения" 
+    suspend fun manageBirthdayEventForContact(
+        contactId: Long, 
+        birthDate: String?, // Формат YYYY-MM-DD или null
+        contactFirstName: String // Для имени события, например, "День рождения Елены"
+    )
 }

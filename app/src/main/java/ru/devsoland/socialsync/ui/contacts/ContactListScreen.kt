@@ -245,7 +245,7 @@ fun ContactListScreen(
                             navController.navigate(AppDestinations.eventDetailRoute(contact.id))
                         },
                         onEditAction = {
-                            navController.navigate(AppDestinations.editContactRoute(contact.id))
+                            navController.navigate(AppDestinations.addEditContactRoute(contact.id)) // Изменено здесь
                         },
                         onDeleteAction = {
                             contactToDelete = contact

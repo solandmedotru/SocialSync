@@ -13,8 +13,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import ru.devsoland.socialsync.data.dao.ContactDao
-import ru.devsoland.socialsync.data.dao.EventDao
+import ru.devsoland.socialsync.data.database.ContactDao // Предполагаем, что этот импорт корректен
+import ru.devsoland.socialsync.data.database.EventDao // ИСПРАВЛЕННЫЙ ИМПОРТ
 // Убедитесь, что MIGRATION_1_2 и MIGRATION_2_3 доступны через AppDatabase.Companion
 import ru.devsoland.socialsync.data.database.AppDatabase 
 import ru.devsoland.socialsync.data.model.Contact
@@ -73,16 +73,16 @@ object AppModule {
     }
 
     @Provides
-    fun provideEventDao(appDatabase: AppDatabase): EventDao {
+    fun provideEventDao(appDatabase: AppDatabase): EventDao { // Теперь тип EventDao здесь будет ru.devsoland.socialsync.data.database.EventDao
         return appDatabase.eventDao()
     }
 
     @Provides
     @Singleton
     fun provideSocialSyncRepository(
-        @ApplicationContext context: Context, // Контекст может быть не нужен здесь, если репозиторий его не использует
+        @ApplicationContext context: Context, 
         contactDao: ContactDao,
-        eventDao: EventDao
+        eventDao: EventDao // И этот параметр теперь будет ru.devsoland.socialsync.data.database.EventDao
     ): SocialSyncRepository {
         return SocialSyncRepositoryImpl(context, contactDao, eventDao)
     }
