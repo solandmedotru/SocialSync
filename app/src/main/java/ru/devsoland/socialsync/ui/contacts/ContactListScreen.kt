@@ -8,7 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.AnimationSpec 
 import androidx.compose.animation.core.spring 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalIndication // Для исправления clickable
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,9 +16,9 @@ import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.DraggableAnchors 
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.anchoredDraggable
-import androidx.compose.foundation.gestures.animateTo // ЯВНЫЙ ИМПОРТ
-import androidx.compose.foundation.gestures.snapTo // Оставим, если вдруг понадобится
-import androidx.compose.foundation.interaction.MutableInteractionSource // Для исправления clickable
+import androidx.compose.foundation.gestures.animateTo 
+import androidx.compose.foundation.gestures.snapTo 
+import androidx.compose.foundation.interaction.MutableInteractionSource 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,7 +51,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clip // Нужен для .clip(shape)
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -282,7 +282,7 @@ fun ContactListItem(
     onDeleteAction: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val density = LocalDensity.current
+    val density = LocalDensity.current // Убрал, т.к. thresholds пока не используются
 
     val actionButtonsWidth = remember { 120.dp }
     val actionButtonsWidthPx = with(density) { actionButtonsWidth.toPx() }
@@ -298,6 +298,7 @@ fun ContactListItem(
         AnchoredDraggableState(
             initialValue = DragAnchors.Closed,
             anchors = currentAnchors
+            // positionalThreshold и velocityThreshold пока убраны для простоты
         )
     }
 
@@ -307,8 +308,9 @@ fun ContactListItem(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f))
+            .padding(horizontal = 16.dp, vertical = 4.dp) // Внешние отступы
+            .clip(MaterialTheme.shapes.medium) // Сначала обрезаем Box по нужной форме
+            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)) // Затем заливаем цветом
     ) {
         Row(
             modifier = Modifier
@@ -358,7 +360,7 @@ fun ContactListItem(
                 .anchoredDraggable(state = draggableState, orientation = Orientation.Horizontal)
                 .clickable(
                     interactionSource = interactionSource,
-                    indication = LocalIndication.current, // Явно используем текущую Indication
+                    indication = LocalIndication.current, 
                     onClick = {
                         if (draggableState.currentValue == DragAnchors.Open) {
                             coroutineScope.launch { draggableState.animateTo<DragAnchors>(targetValue = DragAnchors.Closed, animationSpec = closeActionAnimationSpec) }
@@ -368,11 +370,12 @@ fun ContactListItem(
                     }
                 ),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            // Форма Card по умолчанию MaterialTheme.shapes.medium, так что совпадает с Box
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(MaterialTheme.colorScheme.surfaceVariant) // Фон самой карточки
                     .padding(vertical = 12.dp, horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
