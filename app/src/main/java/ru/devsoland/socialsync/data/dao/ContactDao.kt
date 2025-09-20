@@ -19,7 +19,10 @@ interface ContactDao {
     suspend fun update(contact: Contact)
 
     @Delete
-    suspend fun delete(contact: Contact)
+    suspend fun delete(contact: Contact) // Этот метод можно использовать, если есть объект Contact
+
+    @Query("DELETE FROM contacts WHERE id = :contactId")
+    suspend fun deleteContactById(contactId: Long) // Новый метод для удаления по ID
 
     @Query("SELECT * FROM contacts ORDER BY lastName ASC, firstName ASC")
     fun getAllContacts(): Flow<List<Contact>>
@@ -27,7 +30,6 @@ interface ContactDao {
     @Query("SELECT * FROM contacts WHERE id = :contactId")
     fun getContactById(contactId: Long): Flow<Contact?>
 
-    // НОВЫЙ МЕТОД
     @Query("SELECT * FROM contacts WHERE deviceContactId = :deviceContactId LIMIT 1")
     suspend fun getContactByDeviceContactId(deviceContactId: String): Contact?
 }

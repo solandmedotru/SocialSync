@@ -39,6 +39,10 @@ class SocialSyncRepositoryImpl @Inject constructor(
         contactDao.delete(contact)
     }
 
+    override suspend fun deleteContactById(contactId: Long) {
+        contactDao.deleteContactById(contactId)
+    }
+
     @SuppressLint("Range")
     override suspend fun fetchDeviceContacts(): List<Contact> = withContext(Dispatchers.IO) {
         val deviceContacts = mutableListOf<Contact>()

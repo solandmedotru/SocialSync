@@ -11,7 +11,8 @@ interface SocialSyncRepository {
     fun getContactById(contactId: Long): Flow<Contact?>
     suspend fun insertContact(contact: Contact): Long
     suspend fun updateContact(contact: Contact)
-    suspend fun deleteContact(contact: Contact)
+    suspend fun deleteContact(contact: Contact) // Удаление по объекту
+    suspend fun deleteContactById(contactId: Long) // Новый метод: удаление по ID
     suspend fun fetchDeviceContacts(): List<Contact>
     suspend fun getContactByDeviceContactId(deviceContactId: String): Contact? 
 

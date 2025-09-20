@@ -76,4 +76,8 @@
     <string name="delete_greeting_confirm_title">Подтверждение удаления</string>
     <string name="delete_greeting_confirm_text">Вы уверены, что хотите удалить это поздравление?</string>
     <string name="delete_button_label">Удалить</string>
+
+    <string name="delete_contact_confirm_title">Удалить контакт?</string>
+    <string name="delete_contact_confirm_text">Вы уверены, что хотите удалить контакт %1$s? Это действие также удалит все связанные с ним события.</string>
+    <string name="delete_contact_description">Удалить контакт</string>
 </resources>

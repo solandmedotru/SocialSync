@@ -140,4 +140,16 @@ class ContactListViewModel @Inject constructor(
             }
         }
     }
+
+    fun deleteContact(contactId: Long) {
+        viewModelScope.launch {
+            try {
+                repository.deleteContactById(contactId)
+                println("ContactListVM: Контакт с ID $contactId успешно удален.")
+            } catch (e: Exception) {
+                println("ContactListVM: Ошибка при удалении контакта с ID $contactId: ${e.message}")
+                // Здесь можно обработать ошибку, например, показать Snackbar
+            }
+        }
+    }
 }
