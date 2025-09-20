@@ -1,12 +1,19 @@
 package ru.devsoland.socialsync.ui.events
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border // Импорт для Modifier.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.* 
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed 
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,10 +24,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color // Не используется напрямую, если все из MaterialTheme
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -103,7 +108,7 @@ fun EventsScreen(
                     hasEvent = hasEvent
                 ) {
                     selectedDate = if (selectedDate == day.date) null else day.date
-                    if (hasEvent && day.position == DayPosition.MonthDate) { // Убедимся, что кликаем на день текущего месяца
+                    if (hasEvent && day.position == DayPosition.MonthDate) { 
                         val eventForDay = upcomingEvents.find { uiEvent ->
                             val contactMonthDay = parseContactBirthDateToMonthDay(uiEvent.contact.birthDate)
                             contactMonthDay == dayMonthDay
@@ -137,17 +142,28 @@ fun EventsScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f), 
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp) 
             ) {
-                items(upcomingEvents, key = { it.contact.id }) { event ->
-                    UpcomingEventItem(
-                        event = event,
-                        onClick = {
-                            navController.navigate(AppDestinations.eventDetailRoute(event.contact.id))
+                itemsIndexed(upcomingEvents, key = { _, event -> event.contact.id }) { index, event ->
+                    AnimatedVisibility(
+                        visible = true, 
+                        enter = slideInVertically(
+                            initialOffsetY = { it / 2 },
+                            animationSpec = tween(durationMillis = 300, delayMillis = index * 50)
+                        ) + fadeIn(animationSpec = tween(durationMillis = 300, delayMillis = index * 50)),
+                        exit = slideOutVertically(targetOffsetY = { -it / 2 }) + fadeOut(animationSpec = tween(durationMillis = 150))
+                    ) {
+                        Column { 
+                            UpcomingEventItem(
+                                event = event,
+                                onClick = {
+                                    navController.navigate(AppDestinations.eventDetailRoute(event.contact.id))
+                                }
+                            )
+                            HorizontalDivider() 
                         }
-                    )
-                    Divider()
+                    }
                 }
             }
         }
@@ -161,39 +177,49 @@ fun DayView(
     hasEvent: Boolean, 
     onClick: (CalendarDay) -> Unit
 ) {
+    val today = LocalDate.now()
+    val isToday = day.date == today && day.position == DayPosition.MonthDate
+
     val backgroundColor = when {
         isSelected -> MaterialTheme.colorScheme.primaryContainer
         hasEvent && day.position == DayPosition.MonthDate -> MaterialTheme.colorScheme.tertiaryContainer
+        // Если "сегодня" и не выбрано и не имеет события, можно задать другой фон, но рамка лучше
+        // isToday && !isSelected && !hasEvent -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) 
         day.position == DayPosition.MonthDate -> MaterialTheme.colorScheme.surface
-        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f) // Дни не текущего месяца
+        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     }
 
     val textColor = when {
         isSelected -> MaterialTheme.colorScheme.onPrimaryContainer
         hasEvent && day.position == DayPosition.MonthDate -> MaterialTheme.colorScheme.onTertiaryContainer
+        isToday && !isSelected -> MaterialTheme.colorScheme.primary // Можно выделить текст сегодняшней даты, если она не выбрана
         day.position == DayPosition.MonthDate -> MaterialTheme.colorScheme.onSurface
         else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
     }
 
+    var dayModifier = Modifier
+        .aspectRatio(1f) 
+        .padding(1.dp) 
+        .background(color = backgroundColor)
+    
+    if (isToday) {
+        dayModifier = dayModifier.border(2.dp, MaterialTheme.colorScheme.primary)
+    }
+
+    dayModifier = dayModifier.clickable(enabled = day.position == DayPosition.MonthDate) {
+        onClick(day)
+    }
+
     Box(
-        modifier = Modifier
-            .aspectRatio(1f) 
-            .padding(1.dp) // Небольшой отступ между ячейками
-            .background(color = backgroundColor) // ИСПОЛЬЗУЕМ НОВЫЙ ФОН
-            .clickable(enabled = day.position == DayPosition.MonthDate) {
-                onClick(day)
-            },
+        modifier = dayModifier,
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = day.date.dayOfMonth.toString(),
-            color = textColor // ИСПОЛЬЗУЕМ СООТВЕТСТВУЮЩИЙ ЦВЕТ ТЕКСТА
+            color = textColor 
         )
-        // Точку-индикатор убрали, так как теперь вся ячейка меняет цвет
     }
 }
-
-// MonthHeader, DaysOfWeekHeader, UpcomingEventItem остаются без изменений
 
 @Composable
 fun MonthHeader(calendarMonth: CalendarMonth) {
@@ -225,8 +251,7 @@ fun DaysOfWeekHeader(daysOfWeek: List<DayOfWeek>) {
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
                 text = dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.bodySmall 
             )
         }
     }
@@ -241,8 +266,8 @@ fun UpcomingEventItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() } 
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = 8.dp) 
+        ,verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
             model = event.contact.photoUri,
@@ -261,8 +286,7 @@ fun UpcomingEventItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "${event.contact.firstName} ${event.contact.lastName}".trim(),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleMedium 
             )
             Text(
                 text = event.eventName,
@@ -276,8 +300,7 @@ fun UpcomingEventItem(
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = event.dateText,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.bodyMedium 
             )
             if (event.daysUntilText.isNotBlank()) {
                 Text(

@@ -4,16 +4,23 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.tween 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AccountCircle // Для Контактов
-import androidx.compose.material.icons.filled.DateRange // Для Событий
-import androidx.compose.material.icons.filled.Person // Для Профиля
+import androidx.compose.material.icons.filled.AccountCircle 
+import androidx.compose.material.icons.filled.DateRange 
+import androidx.compose.material.icons.filled.Person 
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember // Добавлен импорт для remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -27,8 +34,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.navArgument
 import dagger.hilt.android.AndroidEntryPoint
 import ru.devsoland.socialsync.ui.AppDestinations
-// import ru.devsoland.socialsync.ui.addcontact.AddContactScreen // Старый импорт, будет удален
-import ru.devsoland.socialsync.ui.addeditcontact.AddEditContactScreen // Новый импорт
+import ru.devsoland.socialsync.ui.addeditcontact.AddEditContactScreen
 import ru.devsoland.socialsync.ui.aigreeting.AiGreetingPromptScreen
 import ru.devsoland.socialsync.ui.contacts.ContactListScreen
 import ru.devsoland.socialsync.ui.eventdetail.EventDetailScreen
@@ -69,35 +75,64 @@ fun AppNavigator() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-
     val currentRoute = currentDestination?.route
+
+    val snackbarHostState = remember { SnackbarHostState() } // ИЗМЕНЕНО: Создаем SnackbarHostState здесь
 
     val isEventDetailScreen = currentRoute?.startsWith("${AppDestinations.EVENT_DETAIL_ROUTE_PATTERN.substringBefore("/")}/") == true
     val isAddEditContactScreen = currentRoute?.startsWith("${AppDestinations.ADD_EDIT_CONTACT_ROUTE_BASE}/") == true
     val isAiGreetingPromptScreen = currentRoute?.startsWith("${AppDestinations.AI_GREETING_PROMPT_ROUTE_PATTERN.substringBefore("/")}/") == true
 
-    val showBottomBarAndFabAndMainTopBar = currentRoute !in listOf(
+    val showBottomBarAndFab = currentRoute !in listOf(
         AppDestinations.WELCOME_ROUTE,
-        // AppDestinations.ADD_CONTACT_ROUTE // Старый маршрут, больше не нужен для скрытия UI
     ) && !isEventDetailScreen && !isAddEditContactScreen && !isAiGreetingPromptScreen
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }, // ИЗМЕНЕНО: Используем созданный SnackbarHostState
         topBar = {
-            if (showBottomBarAndFabAndMainTopBar) {
-                val currentScreenItem = bottomNavItems.find { it.route == currentRoute }
-                currentScreenItem?.let {
-                    CenterAlignedTopAppBar(
-                        title = { Text(stringResource(id = it.labelResId)) },
-                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            titleContentColor = MaterialTheme.colorScheme.primary
-                        )
+            if (currentRoute != AppDestinations.WELCOME_ROUTE) {
+                TopAppBar(
+                    title = {
+                        val titleResId = when {
+                            currentRoute == AppDestinations.CONTACT_LIST_ROUTE -> R.string.contact_list_title
+                            currentRoute == AppDestinations.EVENTS_ROUTE -> R.string.events_screen_title
+                            currentRoute == AppDestinations.PROFILE_ROUTE -> R.string.profile_screen_title
+                            isEventDetailScreen -> R.string.event_detail_screen_title
+                            isAiGreetingPromptScreen -> R.string.ai_greeting_top_bar_title_main
+                            isAddEditContactScreen -> {
+                                val contactIdArg = navBackStackEntry?.arguments?.getLong(AppDestinations.CONTACT_ID_ARG, AppDestinations.DEFAULT_NEW_CONTACT_ID)
+                                if (contactIdArg == AppDestinations.DEFAULT_NEW_CONTACT_ID) {
+                                    R.string.add_contact_screen_title
+                                } else {
+                                    R.string.edit_contact_screen_title
+                                }
+                            }
+                            else -> R.string.app_name 
+                        }
+                        Text(stringResource(id = titleResId))
+                    },
+                    navigationIcon = {
+                        if (navController.previousBackStackEntry != null) {
+                            IconButton(onClick = { navController.navigateUp() }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = stringResource(R.string.back_button_description)
+                                )
+                            }
+                        }
+                    },
+                    actions = {
+                        
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
-                }
+                )
             }
         },
         bottomBar = {
-            if (showBottomBarAndFabAndMainTopBar) {
+            if (showBottomBarAndFab) {
                 NavigationBar {
                     bottomNavItems.forEach { screen ->
                         NavigationBarItem(
@@ -119,10 +154,8 @@ fun AppNavigator() {
             }
         },
         floatingActionButton = {
-            // Обновим условие для FAB - теперь он должен вести на AddEditContactScreen
-            if (currentRoute == AppDestinations.CONTACT_LIST_ROUTE && showBottomBarAndFabAndMainTopBar) {
-                FloatingActionButton(onClick = {
-                    // Навигация для создания нового контакта
+            if (showBottomBarAndFab && currentRoute == AppDestinations.CONTACT_LIST_ROUTE) {
+                FloatingActionButton(onClick = { 
                     navController.navigate(AppDestinations.addEditContactRoute(AppDestinations.DEFAULT_NEW_CONTACT_ID))
                 }) {
                     Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_contact_description))
@@ -137,7 +170,10 @@ fun AppNavigator() {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            composable(AppDestinations.WELCOME_ROUTE) {
+            composable(
+                route = AppDestinations.WELCOME_ROUTE,
+                exitTransition = { fadeOut(animationSpec = tween(300)) } 
+            ) {
                 WelcomeScreen(
                     onStartClick = {
                         navController.navigate(AppDestinations.CONTACT_LIST_ROUTE) {
@@ -146,49 +182,69 @@ fun AppNavigator() {
                     }
                 )
             }
-            composable(AppDestinations.CONTACT_LIST_ROUTE) {
-                ContactListScreen(navController = navController) 
+            composable(
+                route = AppDestinations.CONTACT_LIST_ROUTE,
+                enterTransition = { slideInHorizontally(initialOffsetX = { -it }) + fadeIn() }, 
+                exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) + fadeOut() }, 
+                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }) + fadeIn() }, 
+                popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut() } 
+            ) {
+                ContactListScreen(navController = navController)
             }
-            composable(AppDestinations.EVENTS_ROUTE) {
+            composable(
+                route = AppDestinations.EVENTS_ROUTE,
+                enterTransition = { slideInHorizontally(initialOffsetX = { -it }) + fadeIn() }, 
+                exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) + fadeOut() }, 
+                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }) + fadeIn() },
+                popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut() }
+            ) {
                 EventsScreen(navController = navController)
             }
-            composable(AppDestinations.PROFILE_ROUTE) {
+            composable(
+                route = AppDestinations.PROFILE_ROUTE,
+                enterTransition = { slideInHorizontally(initialOffsetX = { -it }) + fadeIn() }, 
+                exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) + fadeOut() }, 
+                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }) + fadeIn() },
+                popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut() }
+            ) {
                 ProfileScreen()
             }
-            // Старый маршрут для AddContactScreen - закомментирован или удалить
-            // composable(AppDestinations.ADD_CONTACT_ROUTE) {
-            //     AddContactScreen() 
-            // }
             composable(
                 route = AppDestinations.EVENT_DETAIL_ROUTE_PATTERN,
-                arguments = listOf(navArgument(AppDestinations.EVENT_DETAIL_CONTACT_ID_ARG) { type = NavType.LongType })
+                arguments = listOf(navArgument(AppDestinations.EVENT_DETAIL_CONTACT_ID_ARG) { type = NavType.LongType }),
+                enterTransition = { slideInHorizontally(initialOffsetX = { it }) + fadeIn() }, 
+                exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) + fadeOut() }, 
+                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }) + fadeIn() }, 
+                popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut() } 
             ) {
                 EventDetailScreen(navController = navController)
             }
-            
-            // Обновленный composable для AddEditContactScreen
             composable(
                 route = AppDestinations.ADD_EDIT_CONTACT_ROUTE_PATTERN,
                 arguments = listOf(navArgument(AppDestinations.CONTACT_ID_ARG) { 
                     type = NavType.LongType
-                    defaultValue = AppDestinations.DEFAULT_NEW_CONTACT_ID // Значение по умолчанию для нового контакта
-                })
+                    defaultValue = AppDestinations.DEFAULT_NEW_CONTACT_ID
+                }),
+                enterTransition = { slideInHorizontally(initialOffsetX = { it }) + fadeIn() }, 
+                exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) + fadeOut() },
+                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }) + fadeIn() },
+                popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut() }
             ) { 
                 AddEditContactScreen(navController = navController)
             }
-
             composable(
                 route = AppDestinations.AI_GREETING_PROMPT_ROUTE_PATTERN,
                 arguments = listOf(
-                    navArgument(AppDestinations.AI_GREETING_PROMPT_CONTACT_ID_ARG) { 
-                        type = NavType.LongType 
-                    },
-                    navArgument(AppDestinations.AI_GREETING_PROMPT_EVENT_ID_ARG) { 
-                        type = NavType.LongType 
-                    }
-                )
+                    navArgument(AppDestinations.AI_GREETING_PROMPT_CONTACT_ID_ARG) { type = NavType.LongType },
+                    navArgument(AppDestinations.AI_GREETING_PROMPT_EVENT_ID_ARG) { type = NavType.LongType }
+                ),
+                enterTransition = { slideInHorizontally(initialOffsetX = { it }) + fadeIn() }, 
+                exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) + fadeOut() },
+                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }) + fadeIn() },
+                popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut() }
             ) { 
-                AiGreetingPromptScreen(navController = navController)
+                // ИЗМЕНЕНО: Передаем snackbarHostState в AiGreetingPromptScreen
+                AiGreetingPromptScreen(navController = navController, snackbarHostState = snackbarHostState)
             }
         }
     }

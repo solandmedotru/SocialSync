@@ -11,10 +11,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import ru.devsoland.socialsync.R // <-- Убедись, что R импортирован из твоего пакета
+import ru.devsoland.socialsync.R 
 import ru.devsoland.socialsync.ui.theme.SocialSyncTheme
 
 @Composable
@@ -25,14 +26,14 @@ fun WelcomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(32.dp),
+                .padding(24.dp), 
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceAround
         ) {
             Spacer(modifier = Modifier.weight(0.5f))
 
             Text(
-                text = "SocialSync+",
+                text = stringResource(id = R.string.app_name), 
                 style = MaterialTheme.typography.headlineLarge,
                 textAlign = TextAlign.Center
             )
@@ -40,7 +41,7 @@ fun WelcomeScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Поддерживайте связи без усилий",
+                text = stringResource(id = R.string.welcome_screen_subtitle),
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center
             )
@@ -48,21 +49,20 @@ fun WelcomeScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Никогда не забывайте о важных моментах и поздравлениях близких вам людей.",
+                text = stringResource(id = R.string.welcome_screen_description),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp)) // ИЗМЕНЕНО с 32.dp
 
             Image(
                 painter = painterResource(id = R.drawable.welcome_illustration),
-                contentDescription = "Иллюстрация для приветственного экрана", // Описание для доступности
+                contentDescription = stringResource(R.string.welcome_screen_illustration_description), 
                 modifier = Modifier
                     .fillMaxWidth(0.8f)
-                    // .aspectRatio(1f) // Можно оставить, если картинка квадратная, или убрать если нет
-                    .height(250.dp), // Можно подобрать высоту, или использовать aspectRatio
-                contentScale = ContentScale.Fit // Масштабирование, чтобы картинка вписалась
+                    .height(250.dp), 
+                contentScale = ContentScale.Fit 
             )
 
             Spacer(modifier = Modifier.weight(1f))
@@ -71,11 +71,11 @@ fun WelcomeScreen(
                 onClick = onStartClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp) 
             ) {
-                Text("Начать")
+                Text(stringResource(R.string.welcome_screen_start_button))
             }
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp)) // ИЗМЕНЕНО с 32.dp
         }
     }
 }

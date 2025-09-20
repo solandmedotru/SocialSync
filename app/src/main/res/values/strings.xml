@@ -86,4 +86,22 @@
     <string name="select_date_description">Выберите дату рождения</string>
     <string name="dialog_ok">OK</string>
     <string name="dialog_cancel">Отмена</string>
+    <string name="ai_greeting_full_prompt_label">Полный текст запроса для AI</string>
+    <string name="ai_greeting_full_prompt_placeholder">Отредактируйте или дополните текст запроса
+        здесь. Выбранные ключевые слова и стиль будут добавлены автоматически.
+    </string>
+    <string name="create_with_ai_button">Создать с AI</string>
+    <string name="welcome_screen_illustration_description">Иллюстрация для приветственного экрана
+    </string>
+    <string name="welcome_screen_start_button">Начать</string>
+    <string name="profile_screen_content_placeholder">Экран Профиля</string>
+    <string name="welcome_screen_subtitle">Поддерживайте связи без усилий</string>
+    <string name="welcome_screen_description">Никогда не забывайте о важных моментах и поздравлениях
+        близких вам людей.
+    </string>
+    <string name="share_greeting_description">Поделиться поздравлением</string>
+
+    <!-- <string name="ai_greeting_keywords_label">Ключевые слова (добавить к запросу)</string> -->
+
+    <!-- <string name="ai_greeting_top_bar_title_main">AI Поздравлятор</string> -->
 </resources>

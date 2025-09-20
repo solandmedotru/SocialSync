@@ -5,17 +5,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+// import androidx.compose.foundation.layout.WindowInsets // Можно будет удалить, если больше нигде не используется явно
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.height 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -23,24 +21,17 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -57,26 +48,27 @@ import ru.devsoland.socialsync.R
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AiGreetingPromptScreen(
-    navController: NavController,
-    viewModel: AiGreetingPromptViewModel = hiltViewModel()
+    navController: NavController, 
+    viewModel: AiGreetingPromptViewModel = hiltViewModel(),
+    snackbarHostState: SnackbarHostState
 ) {
     val contactName by viewModel.contactName.collectAsState()
-    val availableRelationships = viewModel.availableRelationships
-    val selectedRelationship by viewModel.selectedRelationship.collectAsState()
+    
+    val fullPromptText by viewModel.fullPromptText.collectAsState()
+    val availableKeywords = viewModel.availableKeywords
+    val selectedKeywords by viewModel.selectedKeywords.collectAsState()
     val availableStyles = viewModel.availableStyles
     val selectedStyle by viewModel.selectedStyle.collectAsState()
-    val userKeywords by viewModel.userKeywords.collectAsState()
 
     val isLoading by viewModel.isLoading.collectAsState()
     val generatedGreetings by viewModel.generatedGreetings.collectAsState()
     val selectedIndices by viewModel.selectedIndices.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
-    val saveStatusMessage by viewModel.saveStatusMessage.collectAsState() // <-- Получаем сообщение о статусе сохранения
+    val saveStatusMessage by viewModel.saveStatusMessage.collectAsState()
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showBottomSheet by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() } // <-- Для Snackbar
 
     LaunchedEffect(generatedGreetings, isLoading) {
         if (generatedGreetings.isNotEmpty() && !isLoading) {
@@ -84,12 +76,10 @@ fun AiGreetingPromptScreen(
         }
     }
 
-    // Показываем Snackbar при изменении saveStatusMessage
     LaunchedEffect(saveStatusMessage) {
         saveStatusMessage?.let {
-            snackbarHostState.showSnackbar(message = it)
-            viewModel.clearSaveStatusMessage() // Очищаем сообщение после показа
-            // Если сохранение было успешным (можно добавить более явную проверку, если нужно)
+            snackbarHostState.showSnackbar(message = it) 
+            viewModel.clearSaveStatusMessage()
             if (it.contains("успешно сохранены", ignoreCase = true)) {
                 scope.launch {
                     if(sheetState.isVisible) sheetState.hide()
@@ -100,150 +90,129 @@ fun AiGreetingPromptScreen(
             }
         }
     }
-
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }, // <-- Добавляем SnackbarHost
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.ai_greeting_top_bar_title_main)) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back_button_description))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary
-                ),
-                windowInsets = TopAppBarDefaults.windowInsets
-            )
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp) 
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp) 
+    ) {
+        Text(
+            text = stringResource(R.string.ai_greeting_generation_title_main),
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        if (contactName.isNotBlank()) {
+             Text(
+                 text = stringResource(R.string.ai_greeting_prompt_for_contact_short, contactName),
+                 style = MaterialTheme.typography.titleMedium,
+                 modifier = Modifier.align(Alignment.CenterHorizontally)
+             )
         }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+
+        OutlinedTextField(
+            value = fullPromptText,
+            onValueChange = { viewModel.onFullPromptTextChanged(it) },
+            modifier = Modifier.fillMaxWidth().height(150.dp),
+            label = { Text(stringResource(R.string.ai_greeting_full_prompt_label)) },
+            placeholder = { Text(stringResource(R.string.ai_greeting_full_prompt_placeholder)) },
+            minLines = 5,
+            enabled = !isLoading
+        )
+
+        Text(stringResource(R.string.ai_greeting_keywords_label), style = MaterialTheme.typography.titleMedium)
+        FlowRow(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            availableKeywords.forEach { keyword ->
+                FilterChip(
+                    selected = selectedKeywords.contains(keyword),
+                    onClick = { viewModel.onKeywordToggled(keyword) }, 
+                    label = { Text(keyword) }, 
+                    enabled = !isLoading
+                )
+            }
+        }
+
+        Text(stringResource(R.string.ai_greeting_style_label), style = MaterialTheme.typography.titleMedium)
+        FlowRow(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            availableStyles.forEach { style ->
+                FilterChip(
+                    selected = (style == selectedStyle), 
+                    onClick = { viewModel.onStyleSelected(style) }, 
+                    label = { Text(style) }, 
+                    enabled = !isLoading
+                )
+            }
+        }
+        
+        if (isLoading) {
+            CircularProgressIndicator()
+        }
+        errorMessage?.let {
+            Text(text = it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+        }
+        Button(
+            onClick = { viewModel.generateGreeting() },
+            enabled = !isLoading && fullPromptText.isNotBlank(),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.ai_greeting_generate_button_label))
+        }
+    }
+
+    if (showBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { 
+                showBottomSheet = false 
+                if(saveStatusMessage != null) viewModel.clearSaveStatusMessage()
+            }, 
+            sheetState = sheetState
+            // windowInsets = WindowInsets(0.dp) // УДАЛЕНО
         ) {
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.Start,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 8.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp) 
             ) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.ai_greeting_generation_title_main),
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-                if (contactName.isNotBlank()) {
-                    Text(
-                        text = stringResource(R.string.ai_greeting_prompt_for_contact_short, contactName),
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = userKeywords,
-                    onValueChange = { viewModel.onUserKeywordsChanged(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.ai_greeting_prompt_label)) },
-                    placeholder = { Text(stringResource(R.string.ai_greeting_prompt_placeholder)) },
-                    minLines = 3,
-                    enabled = !isLoading
-                )
-
-                Text(stringResource(R.string.ai_greeting_relationship_label), style = MaterialTheme.typography.titleMedium)
-                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    availableRelationships.forEach { relationship ->
-                        FilterChip(selected = (relationship == selectedRelationship), onClick = { viewModel.onRelationshipSelected(relationship) }, label = { Text(relationship) }, enabled = !isLoading)
-                    }
-                }
-
-                Text(stringResource(R.string.ai_greeting_style_label), style = MaterialTheme.typography.titleMedium)
-                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    availableStyles.forEach { style ->
-                        FilterChip(selected = (style == selectedStyle), onClick = { viewModel.onStyleSelected(style) }, label = { Text(style) }, enabled = !isLoading)
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp, top = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.padding(bottom = 16.dp))
-                }
-                errorMessage?.let {
-                    Text(text = it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 8.dp))
-                }
-                Button(
-                    onClick = { viewModel.generateGreeting() },
-                    enabled = !isLoading,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.ai_greeting_generate_button_label))
-                }
-            }
-        }
-
-        if (showBottomSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { 
-                    showBottomSheet = false 
-                     // Если пользователь закрывает bottom sheet, не сохраняя, очищаем статус сохранения
-                    if(saveStatusMessage != null) viewModel.clearSaveStatusMessage()
-                }, 
-                sheetState = sheetState
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 8.dp)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(stringResource(R.string.ai_greeting_generated_results_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 16.dp))
-                    if (isLoading && generatedGreetings.isEmpty()) {
-                        CircularProgressIndicator(modifier = Modifier.padding(vertical = 20.dp))
-                    } else if (generatedGreetings.isNotEmpty()) {
-                        LazyColumn(
-                            modifier = Modifier.weight(1f, fill = false).padding(bottom = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            itemsIndexed(generatedGreetings) { index, greeting ->
-                                SelectableGreetingCard(
-                                    text = greeting,
-                                    isSelected = selectedIndices.contains(index),
-                                    onCheckedChange = { viewModel.toggleSelection(index) }
-                                )
-                            }
+                Text(stringResource(R.string.ai_greeting_generated_results_title), style = MaterialTheme.typography.titleLarge)
+                if (isLoading && generatedGreetings.isEmpty()) {
+                    CircularProgressIndicator(modifier = Modifier.padding(vertical = 20.dp))
+                } else if (generatedGreetings.isNotEmpty()) {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        itemsIndexed(generatedGreetings) { index, greeting ->
+                            SelectableGreetingCard(
+                                text = greeting,
+                                isSelected = selectedIndices.contains(index),
+                                onCheckedChange = { viewModel.toggleSelection(index) }
+                            )
                         }
-                        Button(
-                            onClick = {
-                                // Вызываем метод сохранения во ViewModel
-                                viewModel.saveSelectedGreetingsToEvent()
-                                // Логика скрытия sheet и навигации теперь в LaunchedEffect, 
-                                // который слушает saveStatusMessage
-                            },
-                            enabled = selectedIndices.isNotEmpty(),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(stringResource(R.string.ai_greeting_confirm_selection_button_label))
-                        }
-                    } else {
-                        val noResultsMessage = errorMessage ?: stringResource(R.string.ai_greeting_no_results)
-                        Text(noResultsMessage, modifier = Modifier.padding(vertical = 20.dp), textAlign = TextAlign.Center)
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            viewModel.saveSelectedGreetingsToEvent()
+                        },
+                        enabled = selectedIndices.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.ai_greeting_confirm_selection_button_label))
+                    }
+                } else {
+                    val noResultsMessage = errorMessage ?: stringResource(R.string.ai_greeting_no_results)
+                    Text(noResultsMessage, modifier = Modifier.padding(vertical = 20.dp), textAlign = TextAlign.Center)
                 }
             }
         }
@@ -276,3 +245,4 @@ fun SelectableGreetingCard(
         }
     }
 }
+

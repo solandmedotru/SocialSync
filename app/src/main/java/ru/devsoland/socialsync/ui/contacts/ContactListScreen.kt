@@ -5,60 +5,43 @@ import android.content.pm.PackageManager
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.AnimationSpec 
-import androidx.compose.animation.core.spring 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.AnchoredDraggableState
-import androidx.compose.foundation.gestures.DraggableAnchors 
+import androidx.compose.foundation.gestures.DraggableAnchors
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.anchoredDraggable
-import androidx.compose.foundation.gestures.animateTo 
-import androidx.compose.foundation.gestures.snapTo 
-import androidx.compose.foundation.interaction.MutableInteractionSource 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.gestures.animateTo
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip // Нужен для .clip(shape)
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -166,16 +149,15 @@ fun getDaysWord(days: Long): String {
     val absDays = Math.abs(days)
     val lastDigit = absDays % 10
     val lastTwoDigits = absDays % 100
-    val result = if (lastTwoDigits in 11L..19L) stringResource(R.string.days_word_plural_5_many)
+    return if (lastTwoDigits in 11L..19L) stringResource(R.string.days_word_plural_5_many)
     else when (lastDigit) {
         1L -> stringResource(R.string.days_word_singular_1)
         in 2L..4L -> stringResource(R.string.days_word_plural_2_4)
         else -> stringResource(R.string.days_word_plural_5_many)
     }
-    return result
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun ContactListScreen(
     navController: NavController,
@@ -219,7 +201,7 @@ fun ContactListScreen(
             Text(stringResource(R.string.load_contacts_from_device_button))
         }
 
-        if (contacts.isEmpty() && !showDeleteContactDialog) { 
+        if (contacts.isEmpty() && !showDeleteContactDialog) {
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -236,22 +218,32 @@ fun ContactListScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(vertical = 8.dp) 
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp) // ИЗМЕНЕНО
             ) {
-                items(contacts, key = { contact -> contact.id }) { contact ->
-                    ContactListItem(
-                        contact = contact,
-                        onContactClick = {
-                            navController.navigate(AppDestinations.eventDetailRoute(contact.id))
-                        },
-                        onEditAction = {
-                            navController.navigate(AppDestinations.addEditContactRoute(contact.id)) // Изменено здесь
-                        },
-                        onDeleteAction = {
-                            contactToDelete = contact
-                            showDeleteContactDialog = true
-                        }
-                    )
+                itemsIndexed(contacts, key = { _, contact -> contact.id }) { index, contact ->
+                    AnimatedVisibility(
+                        visible = true, 
+                        enter = slideInVertically(
+                            initialOffsetY = { it / 2 },
+                            animationSpec = tween(durationMillis = 300, delayMillis = index * 50) 
+                        ) + fadeIn(animationSpec = tween(durationMillis = 300, delayMillis = index * 50)),
+                        exit = slideOutVertically(targetOffsetY = { -it / 2 }) + fadeOut(animationSpec = tween(durationMillis = 150)),
+                        modifier = Modifier.padding(vertical = 4.dp) // Добавлен вертикальный отступ для каждого анимированного элемента
+                    ) {
+                        ContactListItem(
+                            contact = contact,
+                            onContactClick = {
+                                navController.navigate(AppDestinations.eventDetailRoute(contact.id))
+                            },
+                            onEditAction = {
+                                navController.navigate(AppDestinations.addEditContactRoute(contact.id))
+                            },
+                            onDeleteAction = {
+                                contactToDelete = contact
+                                showDeleteContactDialog = true
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -282,7 +274,7 @@ fun ContactListItem(
     onDeleteAction: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val density = LocalDensity.current // Убрал, т.к. thresholds пока не используются
+    val density = LocalDensity.current
 
     val actionButtonsWidth = remember { 120.dp }
     val actionButtonsWidthPx = with(density) { actionButtonsWidth.toPx() }
@@ -298,7 +290,6 @@ fun ContactListItem(
         AnchoredDraggableState(
             initialValue = DragAnchors.Closed,
             anchors = currentAnchors
-            // positionalThreshold и velocityThreshold пока убраны для простоты
         )
     }
 
@@ -307,10 +298,10 @@ fun ContactListItem(
 
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp) // Внешние отступы
-            .clip(MaterialTheme.shapes.medium) // Сначала обрезаем Box по нужной форме
-            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)) // Затем заливаем цветом
+            .fillMaxWidth() 
+            // .padding(horizontal = 16.dp, vertical = 4.dp) // УБРАНО - горизонтальный отступ теперь в LazyColumn
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f))
     ) {
         Row(
             modifier = Modifier
@@ -360,7 +351,7 @@ fun ContactListItem(
                 .anchoredDraggable(state = draggableState, orientation = Orientation.Horizontal)
                 .clickable(
                     interactionSource = interactionSource,
-                    indication = LocalIndication.current, 
+                    indication = LocalIndication.current,
                     onClick = {
                         if (draggableState.currentValue == DragAnchors.Open) {
                             coroutineScope.launch { draggableState.animateTo<DragAnchors>(targetValue = DragAnchors.Closed, animationSpec = closeActionAnimationSpec) }
@@ -370,13 +361,12 @@ fun ContactListItem(
                     }
                 ),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            // Форма Card по умолчанию MaterialTheme.shapes.medium, так что совпадает с Box
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant) // Фон самой карточки
-                    .padding(vertical = 12.dp, horizontal = 16.dp),
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(vertical = 12.dp, horizontal = 16.dp), // Внутренний отступ карточки остается
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
@@ -394,8 +384,7 @@ fun ContactListItem(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "${contact.firstName ?: ""} ${contact.lastName ?: ""}".trim(),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleMedium
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -486,18 +475,24 @@ fun ContactListItemPreview() {
     )
     SocialSyncTheme {
         Column(Modifier.background(MaterialTheme.colorScheme.background).padding(vertical=8.dp)) {
-            ContactListItem(
-                contact = sampleContact,
-                onContactClick = { Log.d("Preview", "Contact clicked") },
-                onEditAction = { Log.d("Preview", "Edit clicked") },
-                onDeleteAction = { Log.d("Preview", "Delete clicked") }
-            )
-            ContactListItem(
-                contact = sampleContact.copy(id = 2, firstName = "Иван", lastName = "БезФотоБезТегов", photoUri = null, tags = emptyList(), birthDate = "--01-20"),
-                onContactClick = { Log.d("Preview", "Contact clicked") },
-                onEditAction = { Log.d("Preview", "Edit clicked") },
-                onDeleteAction = { Log.d("Preview", "Delete clicked") }
-            )
+            // Padding для Preview, чтобы имитировать contentPadding LazyColumn
+            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                ContactListItem(
+                    contact = sampleContact,
+                    onContactClick = { Log.d("Preview", "Contact clicked") },
+                    onEditAction = { Log.d("Preview", "Edit clicked") },
+                    onDeleteAction = { Log.d("Preview", "Delete clicked") }
+                )
+            }
+            Spacer(Modifier.height(8.dp)) // Имитация отступа между элементами
+            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                 ContactListItem(
+                    contact = sampleContact.copy(id = 2, firstName = "Иван", lastName = "БезФотоБезТегов", photoUri = null, tags = emptyList(), birthDate = "--01-20"),
+                    onContactClick = { Log.d("Preview", "Contact clicked") },
+                    onEditAction = { Log.d("Preview", "Edit clicked") },
+                    onDeleteAction = { Log.d("Preview", "Delete clicked") }
+                )
+            }
         }
     }
 }
