@@ -17,18 +17,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavType // <-- ДОБАВЛЕН ИМПОРТ
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.navArgument // <-- ДОБАВЛЕН ИМПОРТ
+import androidx.navigation.navArgument
 import dagger.hilt.android.AndroidEntryPoint
 import ru.devsoland.socialsync.ui.AppDestinations
 import ru.devsoland.socialsync.ui.addcontact.AddContactScreen
 import ru.devsoland.socialsync.ui.contacts.ContactListScreen
+import ru.devsoland.socialsync.ui.editcontact.EditContactScreen // <-- ДОБАВЛЕН ИМПОРТ
 import ru.devsoland.socialsync.ui.eventdetail.EventDetailScreen
 import ru.devsoland.socialsync.ui.events.EventsScreen
 import ru.devsoland.socialsync.ui.profile.ProfileScreen
@@ -68,18 +69,20 @@ fun AppNavigator() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    // Сравниваем текущий маршрут с шаблоном маршрута деталей события
-    val isEventDetailScreen = currentDestination?.route?.startsWith("event_detail/") == true
+    val currentRoute = currentDestination?.route
 
-    val showBottomBarAndFabAndMainTopBar = currentDestination?.route !in listOf(
+    val isEventDetailScreen = currentRoute?.startsWith("event_detail/") == true
+    val isEditContactScreen = currentRoute?.startsWith("edit_contact/") == true
+
+    val showBottomBarAndFabAndMainTopBar = currentRoute !in listOf(
         AppDestinations.WELCOME_ROUTE,
         AppDestinations.ADD_CONTACT_ROUTE
-    ) && !isEventDetailScreen // <-- ИЗМЕНЕНО УСЛОВИЕ
+    ) && !isEventDetailScreen && !isEditContactScreen
 
     Scaffold(
         topBar = {
             if (showBottomBarAndFabAndMainTopBar) {
-                val currentScreenItem = bottomNavItems.find { it.route == currentDestination?.route }
+                val currentScreenItem = bottomNavItems.find { it.route == currentRoute }
                 currentScreenItem?.let {
                     CenterAlignedTopAppBar(
                         title = { Text(stringResource(id = it.labelResId)) },
@@ -114,7 +117,7 @@ fun AppNavigator() {
             }
         },
         floatingActionButton = {
-            if (currentDestination?.route == AppDestinations.CONTACT_LIST_ROUTE && showBottomBarAndFabAndMainTopBar) {
+            if (currentRoute == AppDestinations.CONTACT_LIST_ROUTE && showBottomBarAndFabAndMainTopBar) {
                 FloatingActionButton(onClick = {
                     navController.navigate(AppDestinations.ADD_CONTACT_ROUTE)
                 }) {
@@ -140,7 +143,7 @@ fun AppNavigator() {
                 )
             }
             composable(AppDestinations.CONTACT_LIST_ROUTE) {
-                ContactListScreen()
+                ContactListScreen(navController = navController) 
             }
             composable(AppDestinations.EVENTS_ROUTE) {
                 EventsScreen(navController = navController)
@@ -149,14 +152,19 @@ fun AppNavigator() {
                 ProfileScreen()
             }
             composable(AppDestinations.ADD_CONTACT_ROUTE) {
-                AddContactScreen()
+                AddContactScreen() 
             }
             composable(
-                route = AppDestinations.EVENT_DETAIL_ROUTE_PATTERN, // <-- ИСПОЛЬЗУЕМ ШАБЛОН
-                arguments = listOf(navArgument(AppDestinations.EVENT_DETAIL_CONTACT_ID_ARG) { type = NavType.LongType }) // <-- ДОБАВЛЯЕМ АРГУМЕНТ
+                route = AppDestinations.EVENT_DETAIL_ROUTE_PATTERN,
+                arguments = listOf(navArgument(AppDestinations.EVENT_DETAIL_CONTACT_ID_ARG) { type = NavType.LongType })
             ) {
-                // EventDetailViewModel сам получит contactId из SavedStateHandle
                 EventDetailScreen(navController = navController)
+            }
+            composable(
+                route = AppDestinations.EDIT_CONTACT_ROUTE_PATTERN,
+                arguments = listOf(navArgument(AppDestinations.EDIT_CONTACT_ID_ARG) { type = NavType.LongType })
+            ) { 
+                EditContactScreen(navController = navController)
             }
         }
     }

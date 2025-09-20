@@ -15,11 +15,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import ru.devsoland.socialsync.data.dao.ContactDao
 import ru.devsoland.socialsync.data.dao.EventDao
-import ru.devsoland.socialsync.data.database.AppDatabase
+import ru.devsoland.socialsync.data.database.AppDatabase // Убедитесь, что MIGRATION_1_2 здесь доступен
 import ru.devsoland.socialsync.data.model.Contact
 import ru.devsoland.socialsync.data.repository.SocialSyncRepository
 import ru.devsoland.socialsync.data.repository.SocialSyncRepositoryImpl
-// import java.time.LocalDate // <-- УДАЛЕН ИЛИ ЗАКОММЕНТИРОВАН ИМПОРТ
 import javax.inject.Provider
 import javax.inject.Qualifier
 import javax.inject.Singleton
@@ -41,7 +40,7 @@ object AppModule {
     @Singleton
     fun provideAppDatabase(
         @ApplicationContext appContext: Context,
-        contactDaoProvider: Provider<ContactDao>,
+        contactDaoProvider: Provider<ContactDao>, // Provider для ContactDao
         @ApplicationScope applicationScope: CoroutineScope
     ): AppDatabase {
         return Room.databaseBuilder(
@@ -52,9 +51,10 @@ object AppModule {
         .addCallback(object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
+                // Этот код выполнится только при САМОМ ПЕРВОМ создании БД (когда версия еще не 1)
                 applicationScope.launch {
-                    val contactDao = contactDaoProvider.get()
-                    // deviceContactId для этих контактов будет null, что нормально
+                    val contactDao = contactDaoProvider.get() // Получаем ContactDao через Provider
+                    // Предзаполнение данных. Поле tags будет иметь значение по умолчанию (пустой список)
                     contactDao.insert(Contact(firstName = "Иван", lastName = "Петров", phoneNumber = "123-45-67", birthDate = "1990-05-15"))
                     contactDao.insert(Contact(firstName = "Мария", lastName = "Сидорова", phoneNumber = "987-65-43", birthDate = "1992-10-20"))
                     contactDao.insert(Contact(firstName = "Алексей", lastName = "Смирнов", phoneNumber = "555-12-34", birthDate = "1985-02-01"))
@@ -63,6 +63,7 @@ object AppModule {
                 }
             }
         })
+        .addMigrations(AppDatabase.MIGRATION_1_2) // <-- ДОБАВЛЕНА РЕГИСТРАЦИЯ МИГРАЦИИ
         .build()
     }
 

@@ -5,14 +5,34 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.* 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -29,9 +49,11 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import ru.devsoland.socialsync.R
 import ru.devsoland.socialsync.data.model.Contact
+import ru.devsoland.socialsync.ui.AppDestinations
 import ru.devsoland.socialsync.ui.theme.SocialSyncTheme
 import java.time.LocalDate
 import java.time.MonthDay
@@ -40,23 +62,19 @@ import java.time.format.DateTimeParseException
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
-// formatBirthDateWithDaysUntil и getDaysWord остаются без изменений
-
 @Composable
 fun formatBirthDateWithDaysUntil(birthDateString: String?): String {
     if (birthDateString.isNullOrBlank()) {
-        return "Дата рождения не указана"
+        return stringResource(R.string.birth_date_not_specified)
     }
-
     val today = LocalDate.now()
     var parsedDate: LocalDate? = null
     var isYearKnown = true
-
     try {
         val fullDate = LocalDate.parse(birthDateString, DateTimeFormatter.ISO_LOCAL_DATE)
-        if (fullDate.year >= 1800) { // Считаем год "разумным"
+        if (fullDate.year >= 1800) { 
             parsedDate = fullDate
-        } else { // Если год слишком ранний (например, 0001), считаем его неизвестным
+        } else { 
             parsedDate = LocalDate.of(today.year, fullDate.month, fullDate.dayOfMonth)
             isYearKnown = false
         }
@@ -68,57 +86,49 @@ fun formatBirthDateWithDaysUntil(birthDateString: String?): String {
                 parsedDate = monthDay.atYear(today.year)
                 isYearKnown = false
             } catch (e2: DateTimeParseException) {
-                return birthDateString // Возвращаем исходную строку, если парсинг не удался
+                return birthDateString 
             }
         } else {
-            return birthDateString // Возвращаем исходную строку для других нераспознанных форматов
+            return birthDateString 
         }
     }
-
     if (parsedDate == null) return birthDateString
-
     val birthDateFormatted = if (isYearKnown) {
         parsedDate.format(DateTimeFormatter.ofPattern("d MMMM yyyy 'г.'", Locale("ru")))
     } else {
         parsedDate.format(DateTimeFormatter.ofPattern("d MMMM", Locale("ru")))
     }
-
     var nextBirthday = parsedDate.withYear(today.year)
     if (nextBirthday.isBefore(today)) {
         nextBirthday = nextBirthday.plusYears(1)
     }
-
     val daysUntil = ChronoUnit.DAYS.between(today, nextBirthday)
-
     val daysUntilString = when {
-        daysUntil == 0L -> "(Сегодня!)"
-        daysUntil > 0L -> "(через $daysUntil ${getDaysWord(daysUntil)})"
-        else -> {
-            val daysPassed = ChronoUnit.DAYS.between(nextBirthday, today)
-            "(прошло $daysPassed ${getDaysWord(daysPassed)} назад)"
-        }
+        daysUntil == 0L -> stringResource(R.string.birthday_today)
+        daysUntil > 0L -> stringResource(R.string.birthday_in_days, daysUntil, getDaysWord(daysUntil))
+        else -> ""
     }
-    return "$birthDateFormatted $daysUntilString"
+    return "$birthDateFormatted $daysUntilString".trim()
 }
 
+@Composable // <-- ДОБАВЛЕНА АННОТАЦИЯ @Composable
 fun getDaysWord(days: Long): String {
     val absDays = Math.abs(days)
     val lastDigit = absDays % 10
     val lastTwoDigits = absDays % 100
-    if (lastTwoDigits in 11L..19L) return "дней"
+    if (lastTwoDigits in 11L..19L) return stringResource(R.string.days_word_plural_5_many)
     return when (lastDigit) {
-        1L -> "день"
-        in 2L..4L -> "дня"
-        else -> "дней"
+        1L -> stringResource(R.string.days_word_singular_1)
+        in 2L..4L -> stringResource(R.string.days_word_plural_2_4)
+        else -> stringResource(R.string.days_word_plural_5_many)
     }
 }
 
-
-// OptIn для ExperimentalMaterial3Api здесь больше не нужен, если TopAppBar удален
+@OptIn(ExperimentalLayoutApi::class) 
 @Composable
 fun ContactListScreen(
+    navController: NavController, 
     viewModel: ContactListViewModel = hiltViewModel()
-    // PaddingValues от NavHost в MainActivity будут применены автоматически
 ) {
     val contacts by viewModel.contacts.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -133,7 +143,6 @@ fun ContactListScreen(
         }
     }
 
-    // TopAppBar удален отсюда, управляется из MainActivity
     Column(modifier = Modifier.fillMaxSize()) { 
         Button(
             onClick = {
@@ -151,7 +160,7 @@ fun ContactListScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp) // Отступы для самой кнопки
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Text(stringResource(R.string.load_contacts_from_device_button))
         }
@@ -173,13 +182,17 @@ fun ContactListScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f), 
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp) // Добавляем отступ снизу для контента
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp)
             ) {
                 items(contacts, key = { contact -> contact.id }) { contact ->
                     ContactListItem(
                         contact = contact,
-                        onContactClick = { /* TODO: Навигация на экран деталей контакта */ },
-                        onEditClick = { /* TODO: Навигация на экран редактирования контакта */ }
+                        onContactClick = {
+                             navController.navigate(AppDestinations.eventDetailRoute(contact.id))
+                        },
+                        onEditClick = { 
+                            navController.navigate(AppDestinations.editContactRoute(contact.id))
+                        }
                     )
                     Divider()
                 }
@@ -188,6 +201,7 @@ fun ContactListScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class) 
 @Composable
 fun ContactListItem(
     contact: Contact,
@@ -198,7 +212,7 @@ fun ContactListItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onContactClick() }
-            .padding(vertical = 12.dp), // Этот padding внутри элемента списка остается
+            .padding(vertical = 12.dp), 
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
@@ -223,13 +237,38 @@ fun ContactListItem(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = formatBirthDateWithDaysUntil(contact.birthDate),
+                text = formatBirthDateWithDaysUntil(contact.birthDate), // Эта функция теперь @Composable
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (contact.tags.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    contact.tags.forEach { tag ->
+                        Box(
+                            modifier = Modifier
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.outline,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = tag,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
         }
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(16.dp)) 
 
         IconButton(onClick = onEditClick) {
             Icon(
@@ -241,34 +280,39 @@ fun ContactListItem(
     }
 }
 
-
+@OptIn(ExperimentalLayoutApi::class)
 @Preview(showBackground = true)
 @Composable
 fun ContactListScreenPreview() {
     SocialSyncTheme {
-        // Для превью теперь нужно имитировать Scaffold из MainActivity, если нужен TopAppBar и BottomBar
-        // или просто отображать контент экрана как есть.
-        // Если нужен TopAppBar для превью, его нужно будет добавить здесь вручную.
-        ContactListScreen()
+        // ContactListScreen() 
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Preview(showBackground = true)
 @Composable
 fun ContactListItemPreview() {
-    val sampleContactWithPhoto = Contact(
+    val sampleContactWithPhotoAndTags = Contact(
         id = 1, firstName = "Елена", lastName = "Петрова", birthDate = "1990-10-15",
-        photoUri = "content://com.android.contacts/contacts/1/photo"
+        photoUri = "content://com.android.contacts/contacts/1/photo",
+        tags = listOf("коллега", "подруга", "бегун", "книголюб", "путешественник")
     )
     val sampleContactNoPhoto = Contact(
         id = 2, firstName = "Игорь", lastName = "Максимов", birthDate = "--12-25",
-        photoUri = null
+        photoUri = null,
+        tags = listOf("сосед")
+    )
+    val sampleContactNoTags = Contact(
+        id = 3, firstName = "Анна", lastName = "Волкова", birthDate = "1985-03-30"
     )
     SocialSyncTheme {
-        Column {
-            ContactListItem(contact = sampleContactWithPhoto, onContactClick = {}, onEditClick = {})
-            Divider()
+        Column(Modifier.padding(16.dp)) {
+            ContactListItem(contact = sampleContactWithPhotoAndTags, onContactClick = {}, onEditClick = {})
+            Divider(Modifier.padding(vertical = 8.dp))
             ContactListItem(contact = sampleContactNoPhoto, onContactClick = {}, onEditClick = {})
+            Divider(Modifier.padding(vertical = 8.dp))
+            ContactListItem(contact = sampleContactNoTags, onContactClick = {}, onEditClick = {})
         }
     }
 }

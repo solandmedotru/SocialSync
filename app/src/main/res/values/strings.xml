@@ -20,4 +20,23 @@
     <string name="congratulation_1_text">Здесь текст первого поздравления. Будте здоровы, живите богато!</string>
     <string name="congratulation_2_title">Поздравление второе</string>
     <string name="congratulation_2_text">Текст второго поздравления. Радости, счастья и успеха.</string>
+    <string name="edit_contact_screen_title">Редактирование контакта</string>
+    <string name="save_contact_description">Сохранить контакт</string>
+    <string name="first_name_label">Фамилия</string>
+    <string name="last_name_label">Имя</string>
+    <string name="phone_number_label">Телефон</string>
+    <string name="birth_date_label">Дата рождения</string>
+    <string name="birth_date_placeholder">Введите дату рождения</string>
+    <string name="tags_section_title">Взаимоотношения</string>
+    <string name="add_tag_label">Добавить</string>
+    <string name="add_tag_button_description">Добавить тэг</string>
+    <string name="current_tags_label">Текушие взаимоотношения</string>
+    <string name="remove_tag_description">Удалить тэг</string>
+    <string name="suggested_tags_label">Предложенные тэги</string>
+    <string name="birth_date_not_specified">Дата рождения не задана</string>
+    <string name="birthday_today">День рождения, сегодня</string>
+    <string name="birthday_in_days">День рождения через</string>
+    <string name="days_word_plural_5_many">дней</string>
+    <string name="days_word_singular_1">день</string>
+    <string name="days_word_plural_2_4">дня</string>
 </resources>
